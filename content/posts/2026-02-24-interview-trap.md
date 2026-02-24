@@ -1,6 +1,6 @@
 ---
 title: "Campaign Name: Short Descriptive Subtitle"
-date: YYYY-MM-DD
+date: 2026-02-24
 author: "ThreatProphet"
 description: "One sentence summary for search engines and social sharing."
 tags:
@@ -161,4 +161,4 @@ Preventive configuration changes.
 
 *TLP:CLEAR — This report may be freely shared. Attribution assessments are tentative and based on TTP similarity only. All IOCs are provided for defensive purposes.*
 
-*Report ID: TP-2026-001 | Published: YYYY-MM-DD | Author: ThreatProphet*
+*Report ID: TP-2026-001 | Published: 2026-02-24 | Author: ThreatProphet*
