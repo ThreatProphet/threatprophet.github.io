@@ -508,8 +508,6 @@ level: critical
 
 | Artifact ID | Description | SHA256 |
 |---|---|---|
-| EX-001 | LinkedIn initial contact screenshot | `86c6976aa7da7020346c7bd8812d51fdd407ff27445b7fbf7095a90c8aba8e98` |
-| EX-002 | Google Docs project brief screenshot | `7c023b91523050404d7461cac43113cf50fdb93b58fd0cf354a87322000fdb6b` |
 | EX-003 | `.vscode/tasks.json` - VS Code auto-execution config | `48c6d172a43919df05ec9f506a1483e4c0fe820ea72092888d77b985aa7109c4` |
 | EX-004 | `frontend/.env` - Base64 endpoint and bait secrets | `603f46ba670a4be0bcf23429015ab00ccef04dc278bffc2d855eb8de52f9e711` |
 | EX-005 | `frontend/.env.local` - Additional bait secrets | `37eb8e11b40527de0881189064c657fe1623d6b2c8ad16fc8136782e89367ead` |
