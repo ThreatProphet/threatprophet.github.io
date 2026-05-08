@@ -46,7 +46,7 @@ showToc: true
 
 ## Executive Summary
 
-ThreatProphet investigated a targeted recruitment-themed malware delivery attempt using **MansaTrade-branded identity material**. The target was first approached through LinkedIn with a job opportunity, then asked to provide a CV and email address. That address was later used by a recruiter persona calling himself **Enrique** to deliver a purported smart-contract developer task as a ZIP attachment.
+The case began with a recruitment-themed approach using MansaTrade-branded identity material. After the victim was contacted through LinkedIn about a purported job opportunity and asked to provide a CV and email address, a recruiter persona calling himself **Enrique** used that address to deliver a purported smart-contract developer task as a ZIP attachment.
 
 The follow-on email was displayed as coming from `Recruiter of MansaTrade <recruiter@mansatrade[.]org>`. Header analysis shows that the message passed SPF and DMARC at Google and was authenticated through Hostinger/MailChannels infrastructure for `recruiter@mansatrade[.]org`; DKIM was neutral because the body hash did not verify. This means the message should not be treated as simple display-name spoofing. It does **not** establish whether the mailbox or domain was actor-created, compromised, legitimately operated by the brand, or otherwise misused.
 
