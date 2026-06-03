@@ -46,7 +46,7 @@ report_id: "TP-2026-015"
 showToc: true
 ---
 
-> *"TWhat was given as work concealed its blade in the hidden hooks."*
+> *"What was given as work concealed its blade in the hidden hooks."*
 
 ## Executive Summary
 
@@ -968,22 +968,13 @@ Reflog activity included an initial commit on 2025-12-15 and checkout events on 
 
 ---
 
-## Relationship to Previous ThreatProphet Cases
+## Relationship to TP-2026-014
 
-This case shares several characteristics with previous developer-recruitment malware investigations:
+The closest prior ThreatProphet overlap identified during this investigation is **TP-2026-014, AI-Powered RWA Finance Platform**. Both cases used fake developer-recruitment workflows to deliver ZIP archives containing full local Git repositories, and both abused Git-hook execution as part of the local activation path. TP-2026-014 relied on a README instruction to run `git checkout dev`, which triggered `.git/hooks/post-checkout`; PawCommerce uses a VS Code folder-open task to run `git config core.hooksPath .github; git checkout main`, which redirects hooks to `.github` and triggers `.github/post-checkout`.
 
-- recruitment or hiring pretext;
-- developer task or codebase delivery;
-- local repository execution mechanisms;
-- Node.js payloads;
-- browser credential and wallet targeting;
-- `.env`, private key, token, and seed phrase discovery;
-- clipboard monitoring;
-- cross-platform support for Windows, macOS, Linux, and WSL.
+The payload architecture also overlaps at a meaningful level. TP-2026-014 staged payload material under `$HOME/.vscode`, used Node.js as the runtime, targeted browser profiles, wallet material, local secrets, and WSL/Windows context, and recovered a tri-port C2 layout on `8085`, `8086`, and `8087`. PawCommerce uses the same broad service pattern on `45.61.148[.]220:8085`, `45.61.148[.]220:8086`, and `45.61.148[.]220:8087`, with `8085` supporting browser/wallet and socket-driven file operations, `8086` supporting recursive sensitive-file upload, and `8087` supporting log, notify, and Socket.IO command-and-control behavior.
 
-Compared with TP-2026-013, this case is notable for combining **VS Code folder-open task abuse** with **Git hook redirection** and an independent **NPM/server bootstrap path**. The result is a dual-trigger repository: opening the project in a trusted IDE can trigger one chain, while following normal `npm install` or development startup behavior can trigger another.
-
-The final payload architecture in this case is strongly modular and uses campaign/user keys `705` and `706`, likely distinguishing delivery route, campaign, victim, or build configuration.
+The overlap is therefore strongest at the **execution-mechanism, payload-role, and service-layout** levels: fake recruitment ZIP delivery, Git-hook execution, `.vscode` staging, Node.js payloading, browser/wallet/file targeting, WSL-aware behavior, and the `8085/8086/8087` infrastructure pattern. Exact infrastructure reuse is not established. TP-2026-014 used `216.126.225[.]243`, while PawCommerce uses `45.61.148[.]220`; payload hashes and campaign markers also differ. This should be framed as **tooling-family or operator-workflow similarity**, not proof that both cases were operated from the same infrastructure or by the same actor.
 
 ---
 
