@@ -2,7 +2,7 @@
 title: "Interexy-Branded Gamifly Repositories: Evolution of the BetPoker Loader into a Vercel-Gated Node.js Tasking Implant"
 date: 2026-06-09
 author: "ThreatProphet"
-description: "Analysis of two Git-object-identical Gamifly GitHub repositories delivered through a LinkedIn and Calendly recruitment workflow. The repositories reuse the BetPoker/Dravion loader architecture, automatically launch a backend through VS Code and npm lifecycle mechanisms, exfiltrate the complete Node.js environment to a Vercel gate, and execute an obfuscated five-second tasking implant with rotated C2 infrastructure."
+description: "Analysis of two byte-identical Gamifly GitHub repositories delivered through a LinkedIn and Calendly recruitment workflow. The repositories reuse the BetPoker/Dravion loader architecture, automatically launch a backend through VS Code and npm lifecycle mechanisms, exfiltrate the complete Node.js environment to a Vercel gate, and execute an obfuscated five-second tasking implant with rotated C2 infrastructure."
 tags:
   - contagious-interview
   - fake-developer-recruitment
@@ -77,7 +77,7 @@ The implant polls every five seconds using a server-assigned `sysId`. When the J
 {"status":"ok","message":"server connected","sysId":"ebc95449-34af-4ed5-858c-5c0682872492"}
 ```
 
-No operator task was returned during collection. That does not reduce the malicious assessment: the repository has already exfiltrated the environment, remotely loaded JavaScript, and established a continuous five-second tasking channel capable of arbitrary in-process JavaScript execution.
+No operator task was returned during collection. That does not reduce the malicious assessment: the repository has already exfiltrated the environment, remotely loaded JavaScript, and installed a persistent five-second tasking channel capable of arbitrary in-process JavaScript execution.
 
 The loader is best assessed as an **evolution and reuse of the BetPoker/Dravion toolkit**, not as an unrelated new family. Several current files are exact SHA-256 matches for artifacts documented in previous ThreatProphet cases, including `.env.local`, `config/loadEnv.js`, `routes/index.js`, and `routes/api/auth.js`. The distinctive protocol also remains stable: base64 `AUTH_API`, full `process.env` POST, `x-app-request: ip-check`, `new Function("require", response.data)`, registrar-style beaconing, server-issued `sysId`, and conditional execution of C2-provided JavaScript. The main changes are delivery refinement, Vercel endpoint rotation, campaign-marker rotation, and a new C2 IP on the repeatedly observed port `1224`.
 
@@ -99,7 +99,7 @@ This report is based on:
 
 No C2-provided JavaScript was executed during analysis. The tasking endpoint was queried with controlled data to reproduce the implant protocol and preserve its standby response. The investigation did not obtain a C2 response with `status: "error"`; therefore, any operator-selected post-enrollment module remains unrecovered.
 
-The supplied evidence does not include the original LinkedIn screenshots, LinkedIn profile URL, Calendly URL, Calendly invite metadata, or a recording/transcript of the call. Those omissions limit identity and social-engineering reconstruction but do not affect the technical verdict because the malicious repository, delivery gate, returned implant, and live tasking endpoint were independently preserved.
+The supplied evidence does not include the original LinkedIn screenshots, LinkedIn profile URL, the original chat message containing the repository link, or a recording/transcript of the call. Those omissions limit identity and social-engineering reconstruction but do not affect the technical verdict because the malicious repository, delivery gate, returned implant, and live tasking endpoint were independently preserved.
 
 **Brand-use notice:** the names `Interexy`, `interexyorg`, and `Interexywork` refer to observed lure branding and GitHub organization names. This report does not establish that the legitimate Interexy company, its personnel, or any similarly named third party created, controlled, or knowingly supported the repositories. The most defensible interpretation is impersonation or brand misuse unless independent evidence proves otherwise.
 
@@ -114,7 +114,7 @@ Claims are separated into three categories:
 | Finding | Assessment |
 |---|---|
 | Initial approach | LinkedIn job offer followed by Calendly scheduling and a remote interview |
-| Interview email | `blakesmith.bz@gmail[.]com` in investigator notes |
+| Interview email | `blakesmith.bz@gmail[.]com`, confirmed by the preserved invitation |
 | Delivered project | `Gamifly`, presented as a Web3 gaming platform |
 | Repository duplicates | `interexyorg/Gamifly` and `Interexywork/Gamifly` |
 | Duplicate confidence | Exact Git object-level duplicates; only origin URL differed |
@@ -966,37 +966,6 @@ No evidence establishes that the legitimate Interexy organization or any real pe
 
 ---
 
-## Evidence Gaps and Follow-Up Priorities
-
-The technical report is supportable with the current evidence. The following items would strengthen specific sections:
-
-1. **LinkedIn evidence:** screenshots, profile URL, message timestamps, and exact wording of the offer.
-2. **Calendly evidence:** invite URL, organizer identity, calendar metadata, and event timestamps.
-3. **Interview evidence:** exact call date/time, meeting platform, displayed participant names, and which repository URL was sent first.
-4. **Repository delivery evidence:** preserved chat message containing the GitHub URL.
-5. **Complete HTTP request package:** the raw Stage-1 request body, curl trace, and write-out metadata for publication-independent chain-of-custody review.
-6. **Tasking capture:** a C2 response containing `status: "error"`, if ever obtained safely, to characterize operator-selected post-enrollment behavior.
-7. **Passive infrastructure history:** passive DNS and certificate history for the historical Vercel gates and `136.243.22[.]62` around the collection window.
-
-None of these gaps changes the conclusion that the acquired repositories are malicious loaders with environment theft and arbitrary remote JavaScript execution.
-
----
-
-## Evidence Availability
-
-The private evidence package is not distributed with the public report. Public comparison material is provided through defanged indicators, Git object identifiers, key file hashes, capture hashes, endpoint paths, code patterns, historical commit identifiers, and behavioral descriptions.
-
-Preserved evidence includes:
-
-- Git mirror archives for both duplicate repositories;
-- repository refs, HEAD metadata, and complete commit logs;
-- repository file hashes and historical diffs;
-- Vercel-delivered obfuscated JavaScript;
-- Vercel response headers;
-- tasking standby response and headers;
-- evidence manifests and hashes;
-- tasking-host scan output;
-- investigator notes.
 
 ## Collection and Analysis Boundaries
 
